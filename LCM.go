@@ -1,17 +1,22 @@
 package LCA
 
+import "errors"
+
 struct Tree{
 	root Node
 }
-//TODO make compatible with multiple childs
 struct Node{
 	data int
 	childs []*Node
 }
 
-(t *Tree) lowestCommonAncestor(n1, n2 *Node) Node {
+// TODO make multiple nodes
+(t *Tree) lowestCommonAncestor(n1, n2 *Node) Node, error {
 	var p1 []Node
 	var p2 []Node
+	if n1 == nil || n2 == nil {
+		return nil, errors.New("One of the nodes is nil. n1: %v, n2: %v", n1, n2)
+	}
 	p1 = n1.findPath(t.root)
 	p2 = n2.findPath(t.root) 
 	var lcm Node

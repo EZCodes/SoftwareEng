@@ -1,10 +1,43 @@
 package LCA
 
-(t *Testing) testFindPath{
+import "testing"
+
+
+(t *testing.T) testFindPath{
 
 
 }
 
-(t *Testing) testLowestCommonAncestor{
+(t *testing.T) testLowestCommonAncestor{
+
+	tests :=	[]struct {
+		tree Node
+		Node nodeOne
+		Node nodeTwo
+		want Node
+		wantErr bool
+	}{
+		nodeOne = nil
+		nodeTwo = nil
+		wantErr = true
+	}{
+	
+	
+	}{
+	
+	}{
+	
+	}{
+	
+	
+	}{
+	
+	
+	
+	}{
+	
+	
+	}
 
 }
+
