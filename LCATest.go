@@ -2,13 +2,7 @@ package LCA
 
 import "testing"
 
-
-(t *testing.T) testFindPath{
-
-
-}
-
-(t *testing.T) testLowestCommonAncestor{
+func(t *testing.T) testLowestCommonAncestor(){
 
 	tests :=	[]struct {
 		tree Tree
@@ -65,6 +59,9 @@ import "testing"
 			data: 4,
 		} 
 		wantErr: false,
+		want: Node{
+			data: 2,
+		}
 	},{
 	// two sides of the root
 	tree : Tree{ 
@@ -107,6 +104,9 @@ import "testing"
 			data: 5,
 		} 
 		wantErr: false,	
+		want: Node{
+			data: 1,
+		}
 	},{
 	//one side of the root
 	tree : Tree{ 
@@ -152,6 +152,9 @@ import "testing"
 		data: 6,
 	} 
 	wantErr: false,	
+	want: Node{
+			data: 2,
+	}
 	},{
 	// more than 2 childs
 	tree : Tree{ 
@@ -189,8 +192,9 @@ import "testing"
 			data: 4,
 		} 
 		wantErr: false,	
-	
-	
+		want: Node{
+			data: 2,
+		}
 	},{
 	//node is not in the tree
 	tree : Tree{ 
@@ -240,6 +244,14 @@ import "testing"
 	
 	},
 	}
-
+	for _, test := range tests {
+		fNode, err := test.tree.lowestCommonAncestor(&(test.nodeOne), &(test.nodeTwo))
+		if !(test.wantErr) && err != nil {
+			t.Errorf("Error has occured: %q", err)
+		}
+		if !(test.wantErr) && test.want.data != fNode.data {
+			t.Errorf("Found ancestor is incorrect. Want: %d, Got: %d", test.want.data, fNode.data
+		}
+	}
 }
 
