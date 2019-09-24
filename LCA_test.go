@@ -207,13 +207,15 @@ func TestLowestCommonAncestor(t *testing.T)  {
 
 		//},
 	}
-	for _, test := range tests {
-		fNode, err := test.tree.LowestCommonAncestor(&(test.nodeOne), &(test.nodeTwo))
-		if !(test.wantErr) && err != nil {
-			t.Errorf("Error has occured: %q", err)
-		}
-		if !(test.wantErr) && test.want.data != fNode.data {
-			t.Errorf("Found ancestor is incorrect. Want: %d, Got: %d", test.want.data, fNode.data)
-		}
+	for index, test := range tests {
+		t.Run(string(index), func(t *testing.T) {
+			fNode, err := test.tree.LowestCommonAncestor(&(test.nodeOne), &(test.nodeTwo))
+			if !(test.wantErr) && err != nil {
+				t.Errorf("Error has occured: %q", err)
+			}
+			if !(test.wantErr) && test.want.data != fNode.data {
+				t.Errorf("Found ancestor is incorrect. Want: %d, Got: %d", test.want.data, fNode.data)
+			}
+		})
 	}
 }
