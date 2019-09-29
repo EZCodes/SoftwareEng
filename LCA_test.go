@@ -2,7 +2,7 @@ package LCA
 
 import "testing"
 
-func TestLowestCommonAncestor(t *testing.T)  {
+func TestLowestCommonAncestor(t *testing.T) {
 
 	tests := []struct {
 		tree    Tree
@@ -22,25 +22,25 @@ func TestLowestCommonAncestor(t *testing.T)  {
 				root: Node{
 					data: 1,
 					childs: []*Node{
-							&Node{
-								data: 2,
-								childs: []*Node{
+						&Node{
+							data: 2,
+							childs: []*Node{
+								&Node{
+									data: 3,
+									childs: []*Node{
 										&Node{
-											data: 3,
+											data: 4,
 											childs: []*Node{
-													&Node{
-														data: 4,
-														childs: []*Node{
-																&Node{
-																	data:   5,
-																	childs: []*Node{},
-																},
-														},
-													},
+												&Node{
+													data:   5,
+													childs: []*Node{},
+												},
 											},
 										},
+									},
 								},
 							},
+						},
 					},
 				},
 			},
@@ -60,24 +60,24 @@ func TestLowestCommonAncestor(t *testing.T)  {
 				root: Node{
 					data: 1,
 					childs: []*Node{
-							&Node{
-								data: 4,
-								childs: []*Node{
-										&Node{
-											data:   5,
-											childs: nil,
-										},
+						&Node{
+							data: 4,
+							childs: []*Node{
+								&Node{
+									data:   5,
+									childs: nil,
 								},
 							},
-							&Node{
-								data: 2,
-								childs: []*Node{
-										&Node{
-											data:   3,
-											childs: nil,
-										},
+						},
+						&Node{
+							data: 2,
+							childs: []*Node{
+								&Node{
+									data:   3,
+									childs: nil,
 								},
 							},
+						},
 					},
 				},
 			},
@@ -97,28 +97,28 @@ func TestLowestCommonAncestor(t *testing.T)  {
 				root: Node{
 					data: 1,
 					childs: []*Node{
-							&Node{
-								data:   4,
-								childs: nil,
-							},
-							&Node{
-								data: 2,
-								childs: []*Node{
+						&Node{
+							data:   4,
+							childs: nil,
+						},
+						&Node{
+							data: 2,
+							childs: []*Node{
+								&Node{
+									data: 3,
+									childs: []*Node{
 										&Node{
-											data: 3,
-											childs: []*Node{
-													&Node{
-														data:   5,
-														childs: nil,
-													},
-											},
-										},
-										&Node{
-											data:   6,
+											data:   5,
 											childs: nil,
 										},
+									},
+								},
+								&Node{
+									data:   6,
+									childs: nil,
 								},
 							},
+						},
 					},
 				},
 			},
@@ -138,23 +138,23 @@ func TestLowestCommonAncestor(t *testing.T)  {
 				root: Node{
 					data: 1,
 					childs: []*Node{
-							&Node{
-								data: 2,
-								childs: []*Node{
-										&Node{
-											data:   3,
-											childs: nil,
-										},
-										&Node{
-											data:   4,
-											childs: nil,
-										},
-										&Node{
-											data:   5,
-											childs: nil,
-										},
+						&Node{
+							data: 2,
+							childs: []*Node{
+								&Node{
+									data:   3,
+									childs: nil,
+								},
+								&Node{
+									data:   4,
+									childs: nil,
+								},
+								&Node{
+									data:   5,
+									childs: nil,
 								},
 							},
+						},
 					},
 				},
 			},
@@ -174,24 +174,24 @@ func TestLowestCommonAncestor(t *testing.T)  {
 				root: Node{
 					data: 1,
 					childs: []*Node{
-							&Node{
-								data: 4,
-								childs: []*Node{
-										&Node{
-											data:   5,
-											childs: nil,
-										},
+						&Node{
+							data: 4,
+							childs: []*Node{
+								&Node{
+									data:   5,
+									childs: nil,
 								},
 							},
-							&Node{
-								data: 2,
-								childs: []*Node{
-										&Node{
-											data:   3,
-											childs: nil,
-										},
+						},
+						&Node{
+							data: 2,
+							childs: []*Node{
+								&Node{
+									data:   3,
+									childs: nil,
 								},
 							},
+						},
 					},
 				},
 			},
@@ -202,7 +202,7 @@ func TestLowestCommonAncestor(t *testing.T)  {
 				data: 7,
 			},
 			wantErr: false,
-			
+
 			want: Node{
 				data: 0,
 			},
