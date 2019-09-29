@@ -10,7 +10,6 @@ type Node struct {
 	childs []*Node
 }
 
-// TODO make multiple nodes, also handle if given node is not in the tree
 func (t *Tree) LowestCommonAncestor(n1, n2 *Node) (Node, error) {
 	var p1 []Node
 	var p2 []Node

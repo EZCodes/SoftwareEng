@@ -206,10 +206,7 @@ func TestLowestCommonAncestor(t *testing.T)  {
 			want: Node{
 				data: 0,
 			},
-		}, //{
-		// 3 descendants TODO
-
-		//},
+		},
 	}
 	for index, test := range tests {
 		t.Run(string(index), func(t *testing.T) {
