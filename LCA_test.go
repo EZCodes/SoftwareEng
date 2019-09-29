@@ -202,6 +202,10 @@ func TestLowestCommonAncestor(t *testing.T)  {
 				data: 7,
 			},
 			wantErr: false,
+			
+			want: Node{
+				data: 0,
+			},
 		}, //{
 		// 3 descendants TODO
 
