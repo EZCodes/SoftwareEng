@@ -10,6 +10,9 @@ type Node struct {
 	childs []*Node
 }
 
+// LowestCommonAncestor find the lowest common ancestor of two nodes
+// if found, the node with it is returned, if two nodes dont have a common ancestor
+// empty node is returned
 func (t *Tree) LowestCommonAncestor(n1, n2 *Node) (Node, error) {
 	var p1 []Node
 	var p2 []Node
