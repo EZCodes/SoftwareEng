@@ -2,18 +2,24 @@ package LCA
 
 import "fmt"
 
-type Tree struct {
-	root Node
+type Graph struct {
+	vertices []*Vertex
+	edges    []*Edge
 }
-type Node struct {
+type Vetex struct {
 	data   int
-	childs []*Node
+	outEdg []*Edge
+	incEdg []*Edge
+}
+type Edge struct {
+	dest *Vertex
+	src  *vertex
 }
 
 // LowestCommonAncestor find the lowest common ancestor of two nodes
 // if found, the node with it is returned, if two nodes dont have a common ancestor
 // empty node is returned
-func (t *Tree) LowestCommonAncestor(n1, n2 *Node) (Node, error) {
+func (g *Graph) LowestCommonAncestor(v1, v2 *Vertex) (Vertex, error) {
 	var p1 []Node
 	var p2 []Node
 	if n1 == nil || n2 == nil {
