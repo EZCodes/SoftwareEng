@@ -6,30 +6,34 @@ type Graph struct {
 	vertices []*Vertex
 	edges    []*Edge
 }
-type Vetex struct {
+type Vertex struct {
 	data   int
 	outEdg []*Edge
 	incEdg []*Edge
 }
 type Edge struct {
 	dest *Vertex
-	src  *vertex
+	src  *Vertex
+}
+type Ancestor struct {
+	ancOf *Vertex
+	data *Vertex
+	distance int
 }
 
 // LowestCommonAncestor find the lowest common ancestor of two nodes
 // if found, the node with it is returned, if two nodes dont have a common ancestor
 // empty node is returned
 func (g *Graph) LowestCommonAncestor(v1, v2 *Vertex) (Vertex, error) {
-	var p1 []Node
-	var p2 []Node
-	if n1 == nil || n2 == nil {
-		return Node{}, fmt.Errorf("One of the nodes is nil. n1: %v, n2: %v", n1, n2)
+	var an1 []Ancestor
+	var an2 []Ancestor
+	if v1 == nil || v2 == nil {
+		return Vertex{}, fmt.Errorf("One of the vertices is nil. v1: %v, v2: %v", v1, v2)
 	}
-	p1 = n1.findPath(&(t.root), []Node{})
-	p1 = p1[:len(p1)-1] // last elements is itself, not needed
-	p2 = n2.findPath(&(t.root), []Node{})
-	p2 = p2[:len(p2)-1] // last elements is itself, not needed
-	var lcm Node
+	an1 = v1.findAncestors(0,v1,[]Ancestor{})
+	an2 = v2.findAncestors(0,v2,[]Ancestor{})
+	//TODO
+	var lcm Vertex
 	for i := 0; i < len(p1) && i < len(p2); i++ {
 		if p1[i].data == p2[i].data {
 			lcm = p1[i]
@@ -37,20 +41,18 @@ func (g *Graph) LowestCommonAncestor(v1, v2 *Vertex) (Vertex, error) {
 	}
 	return lcm, nil
 }
-func (n *Node) findPath(other *Node, path []Node) []Node {
-	if n.data == other.data {
-		path = append(path, *other)
-		return path
+func (v *Vertex) findAncestors(d int,curentV *Vertex, ancestors []Ancestor) []Ancestor {
+	ancestors = append(ancestors, Ancestor{
+		ancOf: v,
+		data : currentV,
+		distance: d,
+	})	
+	if len(currentV.incEdg) == 0 {
+		return ancestors
 	}
-	path = append(path, *other)
-	for _, node := range other.childs {
-		path = n.findPath(node, path)
-		if len(path) > 0 && path[len(path)-1].data == n.data {
-			return path
-		}
-		if len(path) > 0 {
-			path = path[:len(path)-1]
-		}
+	d++
+	for _, edge := range currentV.incEdg {
+		ancestors = v.findAncestors(edge.src, ancestors)
 	}
-	return path
+	return ancestors
 }
