@@ -32,11 +32,15 @@ func (g *Graph) LowestCommonAncestor(v1, v2 *Vertex) (Vertex, error) {
 	}
 	an1 = v1.findAncestors(0,v1,[]Ancestor{})
 	an2 = v2.findAncestors(0,v2,[]Ancestor{})
-	//TODO
+	//TODO fix depth of itself, prob infinity
 	var lcm Vertex
-	for i := 0; i < len(p1) && i < len(p2); i++ {
-		if p1[i].data == p2[i].data {
-			lcm = p1[i]
+	for _, ancestorOne := range an1 {
+		for _, ancestorTwo := range an2 {
+			if ancestorTwo.data.data == acncestorOne.data.data {
+                                if ancestorTwo.depth < lcm.depth {
+                                        lcm = &(ancestorTwo.data)
+                                }
+                        }
 		}
 	}
 	return lcm, nil
