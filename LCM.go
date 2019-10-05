@@ -1,7 +1,6 @@
 package LCA
 
 import "fmt"
-import "math"
 
 type Graph struct {
 	vertices []*Vertex
@@ -32,16 +31,16 @@ func (g *Graph) LowestCommonAncestor(v1, v2 *Vertex) (Vertex, error) {
 		return Vertex{}, fmt.Errorf("One of the vertices is nil. v1: %v, v2: %v", v1, v2)
 	}
 	an1 = v1.findAncestors(0,v1,[]Ancestor{})
-
+	an1 = an1[1:] // last element is itself
 	an2 = v2.findAncestors(0,v2,[]Ancestor{})
-
-	//TODO fix depth of itself, prob infinity
-	lcm :=  Ancestor{data: &Vertex{data: math.MaxInt32}} // 32bits should be enough for this scale
+	an2 = an2[1:] // last element is itsef, we dont count node itself as own ancestor
+	distanceToDepth(an1) // only need to do this with one list since if they have LCA, max depth will be same
+	lcm :=  Ancestor{distance: 0} // 32bits should be enough for this scale
 	for _, ancestorOne := range an1 {
 		for _, ancestorTwo := range an2 {
 			if ancestorTwo.data.data == ancestorOne.data.data {
-      	if ancestorTwo.distance < lcm.distance {
-        	lcm = ancestorTwo
+      	if ancestorOne.distance > lcm.distance {
+        	lcm = ancestorOne
         }
 			}
 		}
@@ -62,4 +61,31 @@ func (v *Vertex) findAncestors(d int, currentV *Vertex, ancestors []Ancestor) []
 		ancestors = v.findAncestors(d, edge.src, ancestors)
 	}
 	return ancestors
+}
+
+// convert distance from node of interest into depth from the "root"
+// basically a reverse
+func distanceToDepth (ancestors []Ancestor) []Ancestor {
+	currentDepth := 1
+	maxDepth := findMax(ancestors)
+	for ;maxDepth > 0; {
+		for _, ancestor := range ancestors {
+			if ancestor.distance == maxDepth {
+				ancestor.distance = currentDepth
+			}
+		}
+		currentDepth++
+		maxDepth--
+	}
+	return ancestors
+}
+
+func findMax(ancestors []Ancestor) int {
+	maxAncestor := Ancestor{distance: 0}
+	for _, ancestor := range ancestors {
+		if ancestor.distance > maxAncestor.distance {
+			maxAncestor = ancestor
+		}
+	}
+	return maxAncestor.distance
 }
