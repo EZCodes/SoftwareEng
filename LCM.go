@@ -52,8 +52,11 @@ func (v *Vertex) findAncestors(d int, currentV *Vertex, ancestors []Ancestor, ed
 		data:     currentV,
 		distance: d,
 	}
-	if !contains(currAncestor, ancestors) {
+	isContained, ancestorIndex := contains(currAncestor, ancestors)
+	if !isContained {
 		ancestors = append(ancestors, currAncestor)
+	} else if ancestors[ancestorIndex].distance < currAncestor.distance {
+		ancestors[ancestorIndex].distance = currAncestor.distance
 	}
 	directAncestors := currentV.findSources(edges)
 	if len(directAncestors) == 0 {
@@ -96,14 +99,16 @@ func distanceToDepth(ancestors []Ancestor) []Ancestor {
 	return result
 }
 
-func contains(ancestor Ancestor, ancestors []Ancestor) bool {
-	contained := false
-	for _, other := range ancestors {
+func contains(ancestor Ancestor, ancestors []Ancestor) (bool, int) {
+	isContained := false
+	var containedAncestor int
+	for index, other := range ancestors {
 		if ancestor.data.data == other.data.data {
-			contained = true
+			isContained = true
+			containedAncestor = index
 		}
 	}
-	return contained
+	return isContained, containedAncestor
 }
 
 func findMax(ancestors []Ancestor) int {
