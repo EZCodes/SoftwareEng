@@ -17,9 +17,10 @@ type Ancestor struct {
 	distance int
 }
 
-// LowestCommonAncestor find the lowest common ancestor of two nodes
+// LowestCommonAncestor find the lowest common ancestor of two nodes for Directed Acyclic Graph,
 // if found, the node with it is returned, if two nodes dont have a common ancestor
 // empty vertex (value 0) is returned
+// does not work for graphs with cycles
 func (g *Graph) LowestCommonAncestor(v1, v2 *Vertex) (Vertex, error) {
 	var an1 []Ancestor
 	var an2 []Ancestor
