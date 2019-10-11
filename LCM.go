@@ -28,9 +28,9 @@ func (g *Graph) LowestCommonAncestor(v1, v2 *Vertex) (Vertex, error) {
 		return Vertex{}, fmt.Errorf("One of the vertices is nil. v1: %v, v2: %v", v1, v2)
 	}
 	an1 = v1.findAncestors(0, v1, []Ancestor{}, g.edges)
-	an1 = an1[1:] // last element is itself
+	an1 = an1[1:] // first element is itself
 	an2 = v2.findAncestors(0, v2, []Ancestor{}, g.edges)
-	an2 = an2[1:]        // last element is itsef, we dont count node itself as own ancestor
+	an2 = an2[1:]  // first element is itsef, we dont count node itself as own ancestor
 	an1 = distanceToDepth(an1) // only need to do this with one list since if they have LCA, max depth will be same
 	lcm := Ancestor{
 		distance: 0,
