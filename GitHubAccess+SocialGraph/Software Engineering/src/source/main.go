@@ -3,12 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
-
+    "io/ioutil"
 	"github.com/google/go-github/github"
+	"golang.org/x/oauth2"
 )
 
-// Fetch all the public organizations' membership of a user.
-//
 func fetchRepos(username string) ([]*github.Repository, error) {
 	client := github.NewClient(nil)
 	repos, _, err := client.Repositories.List(context.Background(), username, nil)
@@ -16,14 +15,17 @@ func fetchRepos(username string) ([]*github.Repository, error) {
 }
 
 func main() {
-//	var username string
-//	fmt.Print("Enter GitHub username: ")
-//	fmt.Scanf("%s", &username)
+	token, err := ioutil.ReadFile("src/source/config.txt")
+    if err != nil {
+    	panic(err) // TODO maybe handle this later
+    }
+    
+    ts := oauth2.StaticTokenSource(
+		&oauth2.Token{AccessToken: string(token)},
+	)
+	tc := oauth2.NewClient(context.Background(), ts)
 
-	client := github.NewClient(nil);
-	
-
-	//repos, err := fetchRepos(username)
+	client := github.NewClient(tc)
 	
 	microsoft_repos, err := fetchMicrosoftRepos(client);
 	
@@ -47,7 +49,7 @@ func main() {
 		fmt.Printf("%v. %v\n", i+1, g_repo)
 	}
 }
-// TODO AUTHORIZE MYSELF FOR MORE REQUESTS
+
 func fetchMicrosoftRepos(client *github.Client) ([]*github.Repository, error) {
 	var m_repos []*github.Repository
 	opt := &github.RepositoryListByOrgOptions{
@@ -67,8 +69,23 @@ func fetchMicrosoftRepos(client *github.Client) ([]*github.Repository, error) {
 	
 	return m_repos, nil;
 }
-// TODO
+
 func fetchGoogleRepos(client *github.Client) ([]*github.Repository, error) {
-	repos, _, err := client.Repositories.ListByOrg(context.Background(), "Google" , nil);
-	return repos, err;
+	var g_repos []*github.Repository
+	opt := &github.RepositoryListByOrgOptions{
+		ListOptions: github.ListOptions{PerPage: 100},
+	}
+	for {
+		repos, resp, err := client.Repositories.ListByOrg(context.Background(), "Google" , opt);
+		if err != nil {
+			return nil, err
+		}
+		g_repos = append(g_repos, repos...)
+		if resp.NextPage == 0 {
+			break
+		}
+		opt.Page = resp.NextPage // if next page exists, get next page
+	}
+	
+	return g_repos, nil;
 }

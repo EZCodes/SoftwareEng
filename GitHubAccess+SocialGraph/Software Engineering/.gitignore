@@ -1,1 +1,8 @@
+#config file
+
+*.txt
+
+
+bin/
+pkg/
 
