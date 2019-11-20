@@ -8,7 +8,7 @@ import (
 	"golang.org/x/oauth2"
 	"time"
 )
-const possibleRequestFailures = 10 // after this many attempts, we skip
+const possibleRequestFailures = 20 // after this many attempts, we skip
 
 func fetchRepos(username string) ([]*github.Repository, error) {
 	client := github.NewClient(nil)
@@ -118,7 +118,7 @@ func fetchContributors(client *github.Client, repos []*github.Repository)  ([]*g
 		for {
 			contributors, resp, err := client.Repositories.ListContributorsStats(context.Background(), *(repo.Owner.Login), *(repo.Name));
 			if err != nil {
-				if skipCounter == possibleRequestFailures {
+				if skipCounter >= possibleRequestFailures {
 					fmt.Printf("Skipped repo with index: %d\n", index)
 					break
 				}
@@ -144,4 +144,13 @@ func fetchContributors(client *github.Client, repos []*github.Repository)  ([]*g
 		skipCounter = 0
 	}
 	return all_contributors, nil
+}
+//TODO implement this
+func separateByOrgs(client *github.Client, contributors []*github.ContributorStats, home_commpany string) ([]*github.ContributorStats, []*github.ContributorStats, error) {
+	
+}
+// TODO implement this
+func countContributorChangedLines(){
+	
+}
 }
