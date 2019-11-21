@@ -57,6 +57,18 @@ func main() {
 		return
 	}
 	fmt.Printf("Fetched Microsoft repos languages\n")
+	google_commits, err := getCommits(client, google_repos)
+	if err != nil {
+		fmt.Printf("Error fetching Google commits: %v\n", err)
+		return
+	}
+	fmt.Printf("Fetched Google commits languages\n")
+	microsoft_commits, err := getCommits(client, microsoft_repos)
+	if err != nil {
+		fmt.Printf("Error fetching Microsoft commits: %v\n", err)
+		return
+	}
+	fmt.Printf("Fetched Microsoft commits\n")
 	
 //	google_contributors, err := fetchContributors(client, google_repos)
 //	if err != nil {
@@ -77,6 +89,12 @@ func main() {
 	
 	for key, value := range google_languages {
 		fmt.Printf("Google - Key: %s Value: %d\n", key, value)
+	}
+	for index, commit := range google_commits {
+		fmt.Printf("Index: %d , Value: %v \n", index, commit)
+	}
+	for index, commit := range microsoft_commits {
+		fmt.Printf("Index: %d , Value: %v \n", index, commit)
 	}
 	
 }
@@ -165,10 +183,37 @@ func separateByOrgs(client *github.Client, contributors []*github.ContributorSta
 	//var non_employees_contribs []*github.ContributorStats
 	return nil, nil, nil
 }
-// TODO implement this
-// count amount of changed lines for a contributor
-func countContributorChangedLines(){
-	
+
+// gets all commits for provided repositories
+func getCommits( client *github.Client, repos []*github.Repository) ([]*github.RepositoryCommit, error) {
+	var all_commits []*github.RepositoryCommit
+	opt := &github.CommitsListOptions{
+		ListOptions: github.ListOptions{PerPage: 1000},
+	}
+	for index, repo := range repos {
+		for {
+			commits, resp, err := client.Repositories.ListCommits(context.Background(), *(repo.Owner.Login), *(repo.Name), opt)
+			if err != nil {
+				if resp.StatusCode == 502 { // bad gateway can occur in 1 in 1000, retry immediatly if this happens
+					fmt.Printf("Error 502 while processing repo index: %d. Error: %v\n", index)
+					continue;
+				} else if {
+					resp.StatusCode == 409 { // 409 if repo is empty
+					continue;
+				}	
+				} else {
+					return nil, err
+				}
+			}
+			all_commits = append(all_commits, commits...)
+			if resp.NextPage == 0 {
+				break
+			}
+			opt.Page = resp.NextPage // if the next page exists, get it
+		}
+		fmt.Printf("Repo index: %d \n", index)
+	}
+	return all_commits, nil
 }
 // TODO implement this
 // check organization of a contributor
