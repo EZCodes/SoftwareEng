@@ -146,11 +146,31 @@ func fetchContributors(client *github.Client, repos []*github.Repository)  ([]*g
 	return all_contributors, nil
 }
 //TODO implement this
-func separateByOrgs(client *github.Client, contributors []*github.ContributorStats, home_commpany string) ([]*github.ContributorStats, []*github.ContributorStats, error) {
+// separate contributors by orgs(non employeer and employees)
+func separateByOrgs(client *github.Client, contributors []*github.ContributorStats, home_company string) ([]*github.ContributorStats, []*github.ContributorStats, error) {
+	var employees_contribs []*github.ContributorStats
+	var non_employees_contribs []*github.ContributorStats
 	
 }
 // TODO implement this
+// count amount of changed lines for a contributor
 func countContributorChangedLines(){
 	
 }
+// TODO implement this
+// check organization of a contributor
+func checkOrg(){
+	
 }
+// TODO inmplement this
+// check fav language of the contributor
+func checkFavLanguage(){
+	
+}
+//TODO iimplement this
+// check fav language of the org (avg from all of the repos)
+func checkFavOrgLanguage(){
+	
+}
+
+
