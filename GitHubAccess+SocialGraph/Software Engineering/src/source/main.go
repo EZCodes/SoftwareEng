@@ -45,25 +45,38 @@ func main() {
 	}
 	fmt.Printf("Fetched Google repos\n")
 	
-	google_contributors, err := fetchContributors(client, google_repos)
+	google_languages, err := checkOrgLanguage(client, google_repos)
 	if err != nil {
-		fmt.Printf("Error fetching Google contributors: %v\n", err)
+		fmt.Printf("Error fetching Google repos languages: %v\n", err)
 		return
 	}
-	fmt.Printf("Fetched Google contributors\n")
-	microsoft_contributors, err := fetchContributors(client, microsoft_repos)
+	fmt.Printf("Fetched Google repos languages\n")
+	microsoft_languages, err := checkOrgLanguage(client, microsoft_repos)
 	if err != nil {
-		fmt.Printf("Error fetching Microsoft contributors: %v\n", err)
+		fmt.Printf("Error fetching Microsoft repos languages: %v\n", err)
 		return
 	}
-	fmt.Printf("Fetched MS contributors \n")
+	fmt.Printf("Fetched Microsoft repos languages\n")
 	
-	for i, m_contrib := range microsoft_contributors {
-		fmt.Printf("%v. %v\n", i+1, m_contrib)
+//	google_contributors, err := fetchContributors(client, google_repos)
+//	if err != nil {
+//		fmt.Printf("Error fetching Google contributors: %v\n", err)
+//		return
+//	}
+//	fmt.Printf("Fetched Google contributors\n")
+//	microsoft_contributors, err := fetchContributors(client, microsoft_repos)
+//	if err != nil {
+//		fmt.Printf("Error fetching Microsoft contributors: %v\n", err)
+//		return
+//	}
+//	fmt.Printf("Fetched MS contributors \n")
+//	
+	for key, value := range microsoft_languages {
+		fmt.Printf("Microsoft - Key: %s Value: %d\n", key, value)
 	}
 	
-	for i, g_contrib := range google_contributors {
-		fmt.Printf("%v. %v\n", i+1, g_contrib)
+	for key, value := range google_languages {
+		fmt.Printf("Google - Key: %s Value: %d\n", key, value)
 	}
 	
 }
@@ -148,9 +161,9 @@ func fetchContributors(client *github.Client, repos []*github.Repository)  ([]*g
 //TODO implement this
 // separate contributors by orgs(non employeer and employees)
 func separateByOrgs(client *github.Client, contributors []*github.ContributorStats, home_company string) ([]*github.ContributorStats, []*github.ContributorStats, error) {
-	var employees_contribs []*github.ContributorStats
-	var non_employees_contribs []*github.ContributorStats
-	
+	//var employees_contribs []*github.ContributorStats
+	//var non_employees_contribs []*github.ContributorStats
+	return nil, nil, nil
 }
 // TODO implement this
 // count amount of changed lines for a contributor
@@ -167,10 +180,33 @@ func checkOrg(){
 func checkFavLanguage(){
 	
 }
-//TODO iimplement this
-// check fav language of the org (avg from all of the repos)
-func checkFavOrgLanguage(){
-	
+
+// check languages of the org from all repos
+func checkOrgLanguage(client *github.Client, repos []*github.Repository) (map[string]int, error) {
+	all_langs := make(map[string]int)
+	for index, repo := range repos {
+		langs, _, err := client.Repositories.ListLanguages(context.Background(), *(repo.Owner.Login), *(repo.Name))
+		if err != nil {
+			return nil, err
+		}
+		all_langs = addToMap(all_langs, langs)
+		fmt.Printf("Repo index: %d \n", index)
+	}
+	return all_langs, nil
 }
+
+// adds values from one map to another, if key exists, sum the values
+func addToMap(base_map, map_to_add map[string]int) map[string]int {
+	for key, value := range map_to_add {
+		val, ex := base_map[key]
+		if ex {
+			val = val + value
+			base_map[key] = val
+		} else {
+			base_map[key] = value
+		}
+	}
+	return base_map
+} 
 
 
