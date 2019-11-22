@@ -196,16 +196,18 @@ func getCommits( client *github.Client, repos []*github.Repository) ([]*github.R
 			if err != nil {
 				if resp.StatusCode == 502 { // bad gateway can occur in 1 in 1000, retry immediatly if this happens
 					fmt.Printf("Error 502 while processing repo index: %d. Error: %v\n", index)
-					continue;
-				} else if {
-					resp.StatusCode == 409 { // 409 if repo is empty
-					continue;
-				}	
+					continue
+				} else if resp.StatusCode == 409 { // 409 if repo is empty
+					continue
 				} else {
 					return nil, err
 				}
 			}
-			all_commits = append(all_commits, commits...)
+			s_commits, err := getSingleCommit(client, commits, repo)
+			if err != nil {
+				return nil, err
+			}
+			all_commits = append(all_commits, s_commits...)
 			if resp.NextPage == 0 {
 				break
 			}
@@ -253,5 +255,23 @@ func addToMap(base_map, map_to_add map[string]int) map[string]int {
 	}
 	return base_map
 } 
+
+// gets single commit start for given list of commits to see changed files and stats as well
+func getSingleCommit(client *github.Client, commits []*github.RepositoryCommit, repo *github.Repository) ([]*github.RepositoryCommit, error) {
+	var all_full_commits []*github.RepositoryCommit
+	for index, commit := range commits {
+		s_commit, resp, err := client.Repositories.GetCommit(context.Background(), repo.GetOwner().GetLogin(), repo.GetName(), commit.GetSHA())
+		if err != nil {
+			if resp.StatusCode == 502 { // bad gateway can occur in 1 in 1000, retry immediatly if this happens
+				fmt.Printf("Error 502 while processing commit index: %d. Error: %v\n", index)
+				continue
+			} else {
+				return nil, err
+			}
+		}
+		all_full_commits = append(all_full_commits, s_commit)
+	}
+	return all_full_commits, nil
+}
 
 
