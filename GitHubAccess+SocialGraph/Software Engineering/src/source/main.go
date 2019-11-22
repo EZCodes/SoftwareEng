@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
     "io/ioutil"
+    "strings"
 	"github.com/google/go-github/github"
 	"golang.org/x/oauth2"
 )
@@ -130,18 +131,18 @@ func fetchGoogleRepos(client *github.Client) ([]*github.Repository, error) {
 	return g_repos, nil;
 }
 
-//TODO implement this
-// separate contributors by orgs(non employeer and employees)
-func separateByOrgs(client *github.Client, contributors []*github.ContributorStats, home_company string) ([]*github.ContributorStats, []*github.ContributorStats, error) {
-	//var employees_contribs []*github.ContributorStats
-	//var non_employees_contribs []*github.ContributorStats
-	return nil, nil, nil
-}
-
-// TODO implement this
-// check organization of a contributor
-func checkOrg(){
-	
+// separate contributors by orgs(non employee and employees)
+func separateByOrgs(contribs []*Contributor, home_company string) ([]*Contributor, []*Contributor) {
+	var employees []*Contributor
+	var non_employees []*Contributor
+	for _, contrib := range contribs {
+		if strings.ToLower(contrib.user.GetCompany()) == strings.ToLower(home_company) {
+			employees = append(employees, contrib)
+		} else {
+			non_employees = append(non_employees, contrib)
+		}
+	}
+	return employees, non_employees
 }
 
 // gets all commits for provided repositories
