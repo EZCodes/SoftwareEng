@@ -6,9 +6,12 @@ import (
     "io/ioutil"
 	"github.com/google/go-github/github"
 	"golang.org/x/oauth2"
-	"time"
 )
 const possibleRequestFailures = 20 // after this many attempts, we skip
+type Contributor struct {
+	user *github.User
+	files []github.CommitFile
+}
 
 func fetchRepos(username string) ([]*github.Repository, error) {
 	client := github.NewClient(nil)
@@ -45,13 +48,13 @@ func main() {
 	}
 	fmt.Printf("Fetched Google repos\n")
 	
-	google_languages, err := checkOrgLanguage(client, google_repos)
+	//google_languages, err := checkOrgLanguage(client, google_repos)
 	if err != nil {
 		fmt.Printf("Error fetching Google repos languages: %v\n", err)
 		return
 	}
 	fmt.Printf("Fetched Google repos languages\n")
-	microsoft_languages, err := checkOrgLanguage(client, microsoft_repos)
+	//microsoft_languages, err := checkOrgLanguage(client, microsoft_repos)
 	if err != nil {
 		fmt.Printf("Error fetching Microsoft repos languages: %v\n", err)
 		return
@@ -70,26 +73,14 @@ func main() {
 	}
 	fmt.Printf("Fetched Microsoft commits\n")
 	
-//	google_contributors, err := fetchContributors(client, google_repos)
-//	if err != nil {
-//		fmt.Printf("Error fetching Google contributors: %v\n", err)
-//		return
-//	}
-//	fmt.Printf("Fetched Google contributors\n")
-//	microsoft_contributors, err := fetchContributors(client, microsoft_repos)
-//	if err != nil {
-//		fmt.Printf("Error fetching Microsoft contributors: %v\n", err)
-//		return
-//	}
-//	fmt.Printf("Fetched MS contributors \n")
-//	
-	for key, value := range microsoft_languages {
-		fmt.Printf("Microsoft - Key: %s Value: %d\n", key, value)
-	}
 	
-	for key, value := range google_languages {
-		fmt.Printf("Google - Key: %s Value: %d\n", key, value)
-	}
+//	for key, value := range microsoft_languages {
+//		fmt.Printf("Microsoft - Key: %s Value: %d\n", key, value)
+//	}
+//	
+//	for key, value := range google_languages {
+//		fmt.Printf("Google - Key: %s Value: %d\n", key, value)
+//	}
 	for index, commit := range google_commits {
 		fmt.Printf("Index: %d , Value: %v \n", index, commit)
 	}
@@ -139,49 +130,18 @@ func fetchGoogleRepos(client *github.Client) ([]*github.Repository, error) {
 	return g_repos, nil;
 }
 
-func fetchContributors(client *github.Client, repos []*github.Repository)  ([]*github.ContributorStats, error) {
-	var all_contributors []*github.ContributorStats
-	skipCounter := 0 // if this reaches 5, skip the repo
-	opt := &github.RepositoryListByOrgOptions{
-		ListOptions: github.ListOptions{PerPage: 1000},
-	}
-	for index, repo := range repos {
-		for {
-			contributors, resp, err := client.Repositories.ListContributorsStats(context.Background(), *(repo.Owner.Login), *(repo.Name));
-			if err != nil {
-				if skipCounter >= possibleRequestFailures {
-					fmt.Printf("Skipped repo with index: %d\n", index)
-					break
-				}
-				if resp.StatusCode == 202 { // give a second for github to process stuff and try again
-					time.Sleep(1*time.Second)
-					skipCounter++ 
-					continue;
-				} else if resp.StatusCode == 502 { // bad gateway can occur in 1 in 1000, retry immediatly if this happens
-					fmt.Printf("Error 502 while processing repo index: %d. Error: %v\n", index)
-					skipCounter++
-					continue;
-				} else {
-					return nil, err
-				}
-			}
-			all_contributors = append(all_contributors, contributors...)
-			if resp.NextPage == 0 {
-				break
-			}
-			opt.Page = resp.NextPage // if next page exists, get next page
-		}	
-		fmt.Printf("Repo index: %d \n", index)
-		skipCounter = 0
-	}
-	return all_contributors, nil
-}
 //TODO implement this
 // separate contributors by orgs(non employeer and employees)
 func separateByOrgs(client *github.Client, contributors []*github.ContributorStats, home_company string) ([]*github.ContributorStats, []*github.ContributorStats, error) {
 	//var employees_contribs []*github.ContributorStats
 	//var non_employees_contribs []*github.ContributorStats
 	return nil, nil, nil
+}
+
+// TODO implement this
+// check organization of a contributor
+func checkOrg(){
+	
 }
 
 // gets all commits for provided repositories
@@ -216,16 +176,6 @@ func getCommits( client *github.Client, repos []*github.Repository) ([]*github.R
 		fmt.Printf("Repo index: %d \n", index)
 	}
 	return all_commits, nil
-}
-// TODO implement this
-// check organization of a contributor
-func checkOrg(){
-	
-}
-// TODO inmplement this
-// check fav language of the contributor
-func checkFavLanguage(){
-	
 }
 
 // check languages of the org from all repos
@@ -272,6 +222,18 @@ func getSingleCommit(client *github.Client, commits []*github.RepositoryCommit, 
 		all_full_commits = append(all_full_commits, s_commit)
 	}
 	return all_full_commits, nil
+}
+
+func getContributors (commits []*github.RepositoryCommit) ([]*Contributor) {
+	var all_contribs []*Contributor
+	for _, commit := range commits {
+		contrib := &Contributor{
+			user : commit.GetAuthor(),
+			files : commit.Files,
+		}
+		all_contribs = append(all_contribs, contrib)
+	}
+	return all_contribs
 }
 
 
