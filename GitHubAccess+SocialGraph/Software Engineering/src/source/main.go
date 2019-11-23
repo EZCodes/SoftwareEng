@@ -7,6 +7,11 @@ import (
     "strings"
 	"github.com/google/go-github/github"
 	"golang.org/x/oauth2"
+	"time"
+	"logs"
+	"go.mongodb.org/mongo-driver/bson"
+    "go.mongodb.org/mongo-driver/mongo"
+    "go.mongodb.org/mongo-driver/mongo/options"
 )
 const possibleRequestFailures = 20 // after this many attempts, we skip
 type Contributor struct {
@@ -14,16 +19,25 @@ type Contributor struct {
 	files []github.CommitFile
 }
 
-func fetchRepos(username string) ([]*github.Repository, error) {
-	client := github.NewClient(nil)
-	repos, _, err := client.Repositories.List(context.Background(), username, nil)
-	return repos, err
-}
-
 func main() {
+	// Set MongoDB client options
+	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
+	mongo_client, err := mongo.Connect(context.Background(), clientOptions)
+	if err != nil {
+	    log.Fatal(err)
+	}
+	// Check the connection
+	err = mongo_client.Ping(context.Background(), nil)
+	if err != nil {
+	    log.Fatal(err)
+	}
+	fmt.Println("Connected to MongoDB!")
+	
+	collection := client.Database("Software_Engineering").Collection("Microsoft_repos")
+	
 	token, err := ioutil.ReadFile("src/source/config.txt") // file with just Pesonal Access token in it
     if err != nil {
-    	panic(err) // TODO maybe handle this later
+    	lo.Fatal(err) // TODO maybe handle this later
     }
     
     ts := oauth2.StaticTokenSource(
@@ -31,7 +45,7 @@ func main() {
 	)
 
 	tc := oauth2.NewClient(context.Background(), ts)
-
+	
 	client := github.NewClient(tc)
 	
 	microsoft_repos, err := fetchMicrosoftRepos(client);
@@ -49,18 +63,18 @@ func main() {
 	}
 	fmt.Printf("Fetched Google repos\n")
 	
-	//google_languages, err := checkOrgLanguage(client, google_repos)
-	if err != nil {
-		fmt.Printf("Error fetching Google repos languages: %v\n", err)
-		return
-	}
-	fmt.Printf("Fetched Google repos languages\n")
-	//microsoft_languages, err := checkOrgLanguage(client, microsoft_repos)
-	if err != nil {
-		fmt.Printf("Error fetching Microsoft repos languages: %v\n", err)
-		return
-	}
-	fmt.Printf("Fetched Microsoft repos languages\n")
+//	google_languages, err := checkOrgLanguage(client, google_repos)
+//	if err != nil {
+//		fmt.Printf("Error fetching Google repos languages: %v\n", err)
+//		return
+//	}
+//	fmt.Printf("Fetched Google repos languages\n")
+//	microsoft_languages, err := checkOrgLanguage(client, microsoft_repos)
+//	if err != nil {
+//		fmt.Printf("Error fetching Microsoft repos languages: %v\n", err)
+//		return
+//	}
+//	fmt.Printf("Fetched Microsoft repos languages\n")
 	google_commits, err := getCommits(client, google_repos)
 	if err != nil {
 		fmt.Printf("Error fetching Google commits: %v\n", err)
@@ -88,7 +102,34 @@ func main() {
 	for index, commit := range microsoft_commits {
 		fmt.Printf("Index: %d , Value: %v \n", index, commit)
 	}
+	for _, commit := range microsoft_commits {
+		fmt.Printf("MSValue: %v \n",commit.Files)
+	}
+	for _, commit := range google_commits {
+		fmt.Printf("GValue: %v \n",commit.Files)
+	}
 	
+}
+
+// gets all languages and lines for given languages
+func getContributorsLanguages(contribs []*Contributor) map[string]int {
+	all_langs := make(map[string]int)
+	for _, contrib := range contribs {
+		for _, file := range contrib.files {
+			splitted_string := strings.Split(file.GetFilename(), ".")
+			extension := splitted_string[len(splitted_string-1)]
+			language, exists := extensionMap[extension]
+			if exists {
+				lines, ex := all_langs[language]
+				if ex{
+					all_langs[language] = lines+file.GetChanges()
+				} else {
+					all_langs[language] = file.GetChanges()
+				}
+			}
+		}
+	}
+	return all_langs
 }
 
 func fetchMicrosoftRepos(client *github.Client) ([]*github.Repository, error) {
@@ -156,10 +197,11 @@ func getCommits( client *github.Client, repos []*github.Repository) ([]*github.R
 			commits, resp, err := client.Repositories.ListCommits(context.Background(), *(repo.Owner.Login), *(repo.Name), opt)
 			if err != nil {
 				if resp.StatusCode == 502 { // bad gateway can occur in 1 in 1000, retry immediatly if this happens
-					fmt.Printf("Error 502 while processing repo index: %d. Error: %v\n", index)
+					fmt.Printf("Error 502 while processing repo index: %d. Error: %v\n", index, repo)
 					continue
 				} else if resp.StatusCode == 409 { // 409 if repo is empty
-					continue
+					fmt.Printf("Error 409 Repo empty: %d. Error: %v\n", index, repo)
+					break
 				} else {
 					return nil, err
 				}
@@ -216,15 +258,21 @@ func getSingleCommit(client *github.Client, commits []*github.RepositoryCommit, 
 			if resp.StatusCode == 502 { // bad gateway can occur in 1 in 1000, retry immediatly if this happens
 				fmt.Printf("Error 502 while processing commit index: %d. Error: %v\n", index)
 				continue
+			} else if _, ok := err.(*github.RateLimitError); ok {
+				fmt.Println("hit rate limit, waiting an hour")
+				time.Sleep(time.Hour*1 + time.Minute*3)
+				continue
 			} else {
 				return nil, err
 			}
 		}
 		all_full_commits = append(all_full_commits, s_commit)
+		fmt.Printf("Commit index: %d \n", index)
 	}
 	return all_full_commits, nil
 }
 
+// getting contributors from the commits
 func getContributors (commits []*github.RepositoryCommit) ([]*Contributor) {
 	var all_contribs []*Contributor
 	for _, commit := range commits {
