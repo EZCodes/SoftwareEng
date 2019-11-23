@@ -74,10 +74,9 @@ func main() {
 		for index, doc := range microsoft_repos {
 			insertResult, err := collection.InsertOne(context.Background(), *doc)
 			if err != nil {
-				break // WIP
 			    log.Fatal(err)
 			}
-			fmt.Println("%d uploaded microsoft repo to mongo: %d", insertResult.InsertedID, index)
+			fmt.Println("%d uploaded microsoft repo to mongo: %d",index , insertResult.InsertedID)
 		}
 	}()
 	
@@ -92,12 +91,11 @@ func main() {
 	collection = mongo_client.Database("Software_Engineering").Collection("Google_repos")
 	go func(){
 		for index, doc := range google_repos {
-			insertResult, err := collection.InsertOne(context.Background(),doc)
+			insertResult, err := collection.InsertOne(context.Background(), *doc)
 			if err != nil {
-				break // WIP
 			    log.Fatal(err)
 			}
-			fmt.Println("%d uploaded google repo to mongo: %d", insertResult.InsertedID, index)
+			fmt.Println("%d uploaded google repo to mongo: %d", index, insertResult.InsertedID)
 		}
 	}()
 	
@@ -114,18 +112,41 @@ func main() {
 	}
 	fmt.Printf("Fetched Microsoft repos languages\n")
 	
-//	google_commits, err := getCommits(client, google_repos)
-//	if err != nil {
-//		fmt.Printf("Error fetching Google commits: %v\n", err)
-//		return
-//	}
-//	fmt.Printf("Fetched Google commits\n")
-//	microsoft_commits, err := getCommits(client, microsoft_repos)
-//	if err != nil {
-//		fmt.Printf("Error fetching Microsoft commits: %v\n", err)
-//		return
-//	}
-//	fmt.Printf("Fetched Microsoft commits\n")
+	google_commits, err := getCommits(client, google_repos)
+	if err != nil {
+		fmt.Printf("Error fetching Google commits: %v\n", err)
+		return
+	}
+	fmt.Printf("Fetched Google commits\n")
+	
+	collection = mongo_client.Database("Software_Engineering").Collection("Google_commits")
+	go func(){
+		for index, doc := range google_commits {
+			insertResult, err := collection.InsertOne(context.Background(), *doc)
+			if err != nil {
+			    log.Fatal(err)
+			}
+			fmt.Println("%d uploaded google commit to mongo: %d", index, insertResult.InsertedID)
+		}
+	}()
+	
+	microsoft_commits, err := getCommits(client, microsoft_repos)
+	if err != nil {
+		fmt.Printf("Error fetching Microsoft commits: %v\n", err)
+		return
+	}
+	fmt.Printf("Fetched Microsoft commits\n")
+	
+	collection = mongo_client.Database("Software_Engineering").Collection("Microsoft_commits")
+	go func(){
+		for index, doc := range microsoft_commits {
+			insertResult, err := collection.InsertOne(context.Background(), *doc)
+			if err != nil {
+			    log.Fatal(err)
+			}
+			fmt.Println("%d uploaded microsoft commit to mongo: %d", index, insertResult.InsertedID)
+		}
+	}()
 	
 	
 	for key, value := range microsoft_languages {
@@ -135,45 +156,14 @@ func main() {
 	for key, value := range google_languages {
 		fmt.Printf("Google - Key: %s Value: %d\n", key, value)
 	}
-	all_languages := addToMap(google_languages, microsoft_languages)
-	var sum int
-	for _, value := range all_languages {
-		sum = sum + value
-	}
-	one_fiftieth := sum/50 //2%
-	for key, value := range all_languages {
-		if value > one_fiftieth {
-			fmt.Printf("Big - Key: %s Value: %d\n", key, value)
-		}
-	}
-	var g_sum int
-	for _, value := range google_languages {
-		g_sum = g_sum + value
-	}
-	one_fiftieth = g_sum/50 //2%
-	for key, value := range google_languages {
-		if value > one_fiftieth {
-			fmt.Printf("Big G - Key: %s Value: %d\n", key, value)
-		}
-	}
-	var ms_sum int
-	for _, value := range microsoft_languages {
-		ms_sum = ms_sum + value
-	}
-	one_fiftieth = ms_sum/50 //2%
-	for key, value := range microsoft_languages {
-		if value > one_fiftieth {
-			fmt.Printf("Big MS - Key: %s Value: %d\n", key, value)
-		}
-	}
 	
 	
-//	for index, commit := range google_commits {
-//		fmt.Printf("Index: %d , Value: %v \n", index, commit)
-//	}
-//	for index, commit := range microsoft_commits {
-//		fmt.Printf("Index: %d , Value: %v \n", index, commit)
-//	}
+	for index, commit := range google_commits {
+		fmt.Printf("Index: %d , Value: %v \n", index, commit)
+	}
+	for index, commit := range microsoft_commits {
+		fmt.Printf("Index: %d , Value: %v \n", index, commit)
+	}
 	
 	
 	
@@ -184,30 +174,30 @@ func main() {
 	
 }
 
-// gets all languages and lines for given languages
-//func getContributorsLanguages(contribs []*Contributor) map[string]int {
-//	all_langs := make(map[string]int)
-//	all_langs["Other"] = 0;
-//	for _, contrib := range contribs {
-//		for _, file := range contrib.files {
-//			splitted_string := strings.Split(file.GetFilename(), ".")
-//			extension := splitted_string[len(splitted_string-1)]
-//			language, exists := extensionMap[extension]
-//			if exists {
-//				lines, ex := all_langs[language]
-//				if ex{
-//					all_langs[language] = lines+file.GetChanges()
-//				} else {
-//					all_langs[language] = file.GetChanges()
-//				}
-//			} else {
-//				lines, ex := all_langs["Other"]
-//				all_langs["Other"] = lines + file.GetChanges()
-//			}
-//		}
-//	}
-//	return all_langs
-//}
+ gets all languages and lines for given languages
+func getContributorsLanguages(contribs []*Contributor) map[string]int {
+	all_langs := make(map[string]int)
+	all_langs["Other"] = 0;
+	for _, contrib := range contribs {
+		for _, file := range contrib.files {
+			splitted_string := strings.Split(file.GetFilename(), ".")
+			extension := splitted_string[len(splitted_string-1)]
+			language, exists := extensionMap[extension]
+			if exists {
+				lines, ex := all_langs[language]
+				if ex{
+					all_langs[language] = lines+file.GetChanges()
+				} else {
+					all_langs[language] = file.GetChanges()
+				}
+			} else {
+				lines, ex := all_langs["Other"]
+				all_langs["Other"] = lines + file.GetChanges()
+			}
+		}
+	}
+	return all_langs
+}
 
 func fetchMicrosoftRepos(client *github.Client) ([]*github.Repository, error) {
 	var m_repos []*github.Repository
