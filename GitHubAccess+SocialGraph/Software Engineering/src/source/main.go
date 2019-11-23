@@ -174,14 +174,14 @@ func main() {
 	
 }
 
- gets all languages and lines for given languages
+//gets all languages and lines for given languages
 func getContributorsLanguages(contribs []*Contributor) map[string]int {
 	all_langs := make(map[string]int)
 	all_langs["Other"] = 0;
 	for _, contrib := range contribs {
 		for _, file := range contrib.files {
 			splitted_string := strings.Split(file.GetFilename(), ".")
-			extension := splitted_string[len(splitted_string-1)]
+			extension := splitted_string[len(splitted_string)-1]
 			language, exists := extensionMap[extension]
 			if exists {
 				lines, ex := all_langs[language]
@@ -191,7 +191,7 @@ func getContributorsLanguages(contribs []*Contributor) map[string]int {
 					all_langs[language] = file.GetChanges()
 				}
 			} else {
-				lines, ex := all_langs["Other"]
+				lines, _ := all_langs["Other"] // we manually created it, so it will exist
 				all_langs["Other"] = lines + file.GetChanges()
 			}
 		}
