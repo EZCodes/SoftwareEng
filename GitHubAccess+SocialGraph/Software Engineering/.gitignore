@@ -1,8 +1,8 @@
-#config file
+#config files
 
 *.txt
 
-
-bin/
-pkg/
+#executables
+/bin/
+/pkg/
 
