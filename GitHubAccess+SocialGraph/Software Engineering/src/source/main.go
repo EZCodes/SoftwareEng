@@ -61,112 +61,79 @@ func main() {
 	tc := oauth2.NewClient(context.Background(), ts)
 	
 	client := github.NewClient(tc)
+	go func() {
+		microsoft_repos, err := fetchMicrosoftRepos(client);
 	
-	microsoft_repos, err := fetchMicrosoftRepos(client);
+		if err != nil {
+			fmt.Printf("Error fetching MS repos: %v\n", err)
+			return
+		}
+		fmt.Printf("Fetched MS repos\n")
 	
-	if err != nil {
-		fmt.Printf("Error fetching MS repos: %v\n", err)
-		return
-	}
-	fmt.Printf("Fetched MS repos\n")
-	
-	go func(){
 		for index, doc := range microsoft_repos {
 			insertResult, err := collection.InsertOne(context.Background(), *doc)
 			if err != nil {
-			    log.Fatal(err)
+				log.Fatal(err)
 			}
 			fmt.Println("%d uploaded microsoft repo to mongo: %d",index , insertResult.InsertedID)
 		}
-	}()
 	
-	google_repos, err := fetchGoogleRepos(client);
+		google_repos, err := fetchGoogleRepos(client);
 	
-	if err != nil {
-		fmt.Printf("Error fetching Google repos: %v\n", err)
-		return
-	}
-	fmt.Printf("Fetched Google repos\n")
+		if err != nil {
+			fmt.Printf("Error fetching Google repos: %v\n", err)
+			return
+		}
+		fmt.Printf("Fetched Google repos\n")
 	
-	collection = mongo_client.Database("Software_Engineering").Collection("Google_repos")
-	go func(){
+		collection = mongo_client.Database("Software_Engineering").Collection("Google_repos")
+
 		for index, doc := range google_repos {
 			insertResult, err := collection.InsertOne(context.Background(), *doc)
 			if err != nil {
-			    log.Fatal(err)
+				log.Fatal(err)
 			}
 			fmt.Println("%d uploaded google repo to mongo: %d", index, insertResult.InsertedID)
 		}
-	}()
-	
-	google_languages, err := checkOrgLanguage(client, google_repos)
-	if err != nil {
-		fmt.Printf("Error fetching Google repos languages: %v\n", err)
-		return
-	}
-	fmt.Printf("Fetched Google repos languages\n")
-	microsoft_languages, err := checkOrgLanguage(client, microsoft_repos)
-	if err != nil {
-		fmt.Printf("Error fetching Microsoft repos languages: %v\n", err)
-		return
-	}
-	fmt.Printf("Fetched Microsoft repos languages\n")
-	
-	google_commits, err := getCommits(client, google_repos)
-	if err != nil {
-		fmt.Printf("Error fetching Google commits: %v\n", err)
-		return
-	}
-	fmt.Printf("Fetched Google commits\n")
-	
-	collection = mongo_client.Database("Software_Engineering").Collection("Google_commits")
-	go func(){
-		for index, doc := range google_commits {
-			insertResult, err := collection.InsertOne(context.Background(), *doc)
-			if err != nil {
-			    log.Fatal(err)
-			}
-			fmt.Println("%d uploaded google commit to mongo: %d", index, insertResult.InsertedID)
+
+		collection = mongo_client.Database("Software_Engineering").Collection("Google_commits")
+		google_commits, err := getCommits(client, google_repos, collection)
+		if err != nil {
+			fmt.Printf("Error fetching Google commits: %v\n", err)
+			return
 		}
-	}()
+		fmt.Printf("Fetched Google commits\n")
 	
-	microsoft_commits, err := getCommits(client, microsoft_repos)
-	if err != nil {
-		fmt.Printf("Error fetching Microsoft commits: %v\n", err)
-		return
-	}
-	fmt.Printf("Fetched Microsoft commits\n")
-	
-	collection = mongo_client.Database("Software_Engineering").Collection("Microsoft_commits")
-	go func(){
-		for index, doc := range microsoft_commits {
-			insertResult, err := collection.InsertOne(context.Background(), *doc)
-			if err != nil {
-			    log.Fatal(err)
-			}
-			fmt.Println("%d uploaded microsoft commit to mongo: %d", index, insertResult.InsertedID)
+		collection = mongo_client.Database("Software_Engineering").Collection("Microsoft_commits")
+		microsoft_commits, err := getCommits(client, microsoft_repos, collection)
+		if err != nil {
+			fmt.Printf("Error fetching Microsoft commits: %v\n", err)
+			return
 		}
+		fmt.Printf("Fetched Microsoft commits\n")
+		for index, commit := range google_commits {
+			fmt.Printf("Index: %d , Value: %v \n", index, commit)
+		}
+		for index, commit := range microsoft_commits {
+			fmt.Printf("Index: %d , Value: %v \n", index, commit)
+		}
+		
+//		google_languages, err := checkOrgLanguage(client, google_repos)
+//		if err != nil {
+//			fmt.Printf("Error fetching Google repos languages: %v\n", err)
+//			return
+//		}
+//		fmt.Printf("Fetched Google repos languages\n")
+//		microsoft_languages, err := checkOrgLanguage(client, microsoft_repos)
+//		if err != nil {
+//			fmt.Printf("Error fetching Microsoft repos languages: %v\n", err)
+//			return
+//		}
+//		fmt.Printf("Fetched Microsoft repos languages\n")
 	}()
 	
-	
-	for key, value := range microsoft_languages {
-		fmt.Printf("Microsoft - Key: %s Value: %d\n", key, value)
-	}
-	
-	for key, value := range google_languages {
-		fmt.Printf("Google - Key: %s Value: %d\n", key, value)
-	}
-	
-	
-	for index, commit := range google_commits {
-		fmt.Printf("Index: %d , Value: %v \n", index, commit)
-	}
-	for index, commit := range microsoft_commits {
-		fmt.Printf("Index: %d , Value: %v \n", index, commit)
-	}
-	
-	
-	
+
+
 	http.HandleFunc("/", handler)
 	http.HandleFunc("/view/", viewHandler)
 	http.HandleFunc("/pattern/", testHandler)
@@ -207,7 +174,13 @@ func fetchMicrosoftRepos(client *github.Client) ([]*github.Repository, error) {
 	for {
 		repos, resp, err := client.Repositories.ListByOrg(context.Background(), "Microsoft" , opt);
 		if err != nil {
-			return nil, err
+			if _, ok := err.(*github.RateLimitError); ok {
+				fmt.Println("hit rate limit, waiting an hour")
+				time.Sleep(time.Hour*1 + time.Minute*3)
+				continue
+			} else {
+				return nil, err
+			}
 		}
 		m_repos = append(m_repos, repos...)
 		if resp.NextPage == 0 {
@@ -227,7 +200,13 @@ func fetchGoogleRepos(client *github.Client) ([]*github.Repository, error) {
 	for {
 		repos, resp, err := client.Repositories.ListByOrg(context.Background(), "Google" , opt);
 		if err != nil {
-			return nil, err
+			if _, ok := err.(*github.RateLimitError); ok {
+				fmt.Println("hit rate limit, waiting an hour")
+				time.Sleep(time.Hour*1 + time.Minute*3)
+				continue
+			} else {
+				return nil, err
+			}
 		}
 		g_repos = append(g_repos, repos...)
 		if resp.NextPage == 0 {
@@ -254,9 +233,10 @@ func separateByOrgs(contribs []*Contributor, home_company string) ([]*Contributo
 }
 
 // gets all commits for provided repositories
-func getCommits( client *github.Client, repos []*github.Repository) ([]*github.RepositoryCommit, error) {
+func getCommits( client *github.Client, repos []*github.Repository, collection *mongo.Collection) ([]*github.RepositoryCommit, error) {
 	var all_commits []*github.RepositoryCommit
 	opt := &github.CommitsListOptions{
+		Since: (time.Date(2018, 1, 1, 1, 1, 1, 1, time.FixedZone("CET", 1))),
 		ListOptions: github.ListOptions{PerPage: 1000},
 	}
 	for index, repo := range repos {
@@ -269,11 +249,15 @@ func getCommits( client *github.Client, repos []*github.Repository) ([]*github.R
 				} else if resp.StatusCode == 409 { // 409 if repo is empty
 					fmt.Printf("Error 409 Repo empty: %d. Error: %v\n", index, repo)
 					break
+				} else if _, ok := err.(*github.RateLimitError); ok {
+					fmt.Println("hit rate limit, waiting an hour")
+					time.Sleep(time.Hour*1 + time.Minute*3)
+					continue
 				} else {
 					return nil, err
 				}
 			}
-			s_commits, err := getSingleCommit(client, commits, repo)
+			s_commits, err := getSingleCommit(client, commits, repo, collection)
 			if err != nil {
 				return nil, err
 			}
@@ -294,7 +278,13 @@ func checkOrgLanguage(client *github.Client, repos []*github.Repository) (map[st
 	for index, repo := range repos {
 		langs, _, err := client.Repositories.ListLanguages(context.Background(), *(repo.Owner.Login), *(repo.Name))
 		if err != nil {
-			return nil, err
+			if _, ok := err.(*github.RateLimitError); ok {
+				fmt.Println("hit rate limit, waiting an hour")
+				time.Sleep(time.Hour*1 + time.Minute*3)
+				continue
+			} else {
+				return nil, err
+			}
 		}
 		all_langs = addToMap(all_langs, langs)
 		fmt.Printf("Repo index: %d \n", index)
@@ -317,7 +307,7 @@ func addToMap(base_map, map_to_add map[string]int) map[string]int {
 } 
 
 // gets single commit start for given list of commits to see changed files and stats as well
-func getSingleCommit(client *github.Client, commits []*github.RepositoryCommit, repo *github.Repository) ([]*github.RepositoryCommit, error) {
+func getSingleCommit(client *github.Client, commits []*github.RepositoryCommit, repo *github.Repository, collection *mongo.Collection) ([]*github.RepositoryCommit, error) {
 	var all_full_commits []*github.RepositoryCommit
 	for index, commit := range commits {
 		s_commit, resp, err := client.Repositories.GetCommit(context.Background(), repo.GetOwner().GetLogin(), repo.GetName(), commit.GetSHA())
@@ -333,6 +323,11 @@ func getSingleCommit(client *github.Client, commits []*github.RepositoryCommit, 
 				return nil, err
 			}
 		}
+		insertResult, err := collection.InsertOne(context.Background(), *s_commit)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println("uploaded google commit to mongo: %s", insertResult.InsertedID)
 		all_full_commits = append(all_full_commits, s_commit)
 		fmt.Printf("Commit index: %d \n", index)
 	}
