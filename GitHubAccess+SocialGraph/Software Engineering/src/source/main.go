@@ -16,20 +16,34 @@ import (
  //   "encoding/json"
 )
 const possibleRequestFailures = 20 // after this many attempts, we skip
+
+//describes the information we need about contributor
 type Contributor struct {
 	user *github.User
 	files []github.CommitFile
+}
+
+// describes the Repository, with only the information that we need
+type LiteRepository struct {
+	Owner *github.User
+	Name  string
+}
+
+//Describes the commit only with information that we need
+type LiteCommit struct {
+	Author *github.User
+	Files []github.CommitFile
 }
 
 func main() {
 	// get mongoDB username and password
 	m_username, err := ioutil.ReadFile("src/source/username.txt") // file with just mongoDB username in it
 	if err != nil {
-    	log.Fatal(err) // TODO maybe handle this later
+    	log.Fatal(err)
     }
 	m_password, err := ioutil.ReadFile("src/source/password.txt") // file with just mongoDB password in it
 	if err != nil {
-    	log.Fatal(err) // TODO maybe handle this later
+    	log.Fatal(err) 
     }
 	URI := "mongodb+srv://" + string(m_username) + ":" + string(m_password) + "@sweng-blmoo.azure.mongodb.net/test?retryWrites=true&w=majority"
 	
@@ -51,7 +65,7 @@ func main() {
 	
 	token, err := ioutil.ReadFile("src/source/config.txt") // file with just Pesonal Access token in it
     if err != nil {
-    	log.Fatal(err) // TODO maybe handle this later
+    	log.Fatal(err) 
     }
     
     ts := oauth2.StaticTokenSource(
@@ -166,8 +180,8 @@ func getContributorsLanguages(contribs []*Contributor) map[string]int {
 	return all_langs
 }
 
-func fetchMicrosoftRepos(client *github.Client) ([]*github.Repository, error) {
-	var m_repos []*github.Repository
+func fetchMicrosoftRepos(client *github.Client) ([]*LiteRepository, error) {
+	var m_repos []*LiteRepository
 	opt := &github.RepositoryListByOrgOptions{
 		ListOptions: github.ListOptions{PerPage: 1000},
 	}
@@ -182,7 +196,10 @@ func fetchMicrosoftRepos(client *github.Client) ([]*github.Repository, error) {
 				return nil, err
 			}
 		}
-		m_repos = append(m_repos, repos...)
+		for _, repo := range repos {
+			l_repo := convertToLiteRepo(repo)
+			m_repos = append(m_repos, l_repo)
+		}
 		if resp.NextPage == 0 {
 			break
 		}
@@ -192,8 +209,8 @@ func fetchMicrosoftRepos(client *github.Client) ([]*github.Repository, error) {
 	return m_repos, nil;
 }
 
-func fetchGoogleRepos(client *github.Client) ([]*github.Repository, error) {
-	var g_repos []*github.Repository
+func fetchGoogleRepos(client *github.Client) ([]*LiteRepository, error) {
+	var g_repos []*LiteRepository
 	opt := &github.RepositoryListByOrgOptions{
 		ListOptions: github.ListOptions{PerPage: 1000},
 	}
@@ -208,7 +225,10 @@ func fetchGoogleRepos(client *github.Client) ([]*github.Repository, error) {
 				return nil, err
 			}
 		}
-		g_repos = append(g_repos, repos...)
+		for _, repo := range repos {
+			l_repo := convertToLiteRepo(repo)
+			g_repos = append(g_repos, l_repo)
+		}
 		if resp.NextPage == 0 {
 			break
 		}
@@ -218,7 +238,7 @@ func fetchGoogleRepos(client *github.Client) ([]*github.Repository, error) {
 	return g_repos, nil;
 }
 
-// separate contributors by orgs(non employee and employees)
+// separate contributors by orgs(non employee and employees) //TODO CHECK ORGANIZATION NOT COMPANY
 func separateByOrgs(contribs []*Contributor, home_company string) ([]*Contributor, []*Contributor) {
 	var employees []*Contributor
 	var non_employees []*Contributor
@@ -233,15 +253,15 @@ func separateByOrgs(contribs []*Contributor, home_company string) ([]*Contributo
 }
 
 // gets all commits for provided repositories
-func getCommits( client *github.Client, repos []*github.Repository, collection *mongo.Collection) ([]*github.RepositoryCommit, error) {
-	var all_commits []*github.RepositoryCommit
+func getCommits( client *github.Client, repos []*LiteRepository, collection *mongo.Collection) ([]*LiteCommit, error) {
+	var all_commits []*LiteCommit
 	opt := &github.CommitsListOptions{
-		Since: (time.Date(2018, 1, 1, 1, 1, 1, 1, time.FixedZone("CET", 1))),
+		Since: (time.Date(2019, 1, 1, 1, 1, 1, 1, time.FixedZone("CET", 1))),
 		ListOptions: github.ListOptions{PerPage: 1000},
 	}
 	for index, repo := range repos {
 		for {
-			commits, resp, err := client.Repositories.ListCommits(context.Background(), *(repo.Owner.Login), *(repo.Name), opt)
+			commits, resp, err := client.Repositories.ListCommits(context.Background(), repo.Owner.GetLogin(), repo.Name, opt)
 			if err != nil {
 				if resp.StatusCode == 502 { // bad gateway can occur in 1 in 1000, retry immediatly if this happens
 					fmt.Printf("Error 502 while processing repo index: %d. Error: %v\n", index, repo)
@@ -273,10 +293,10 @@ func getCommits( client *github.Client, repos []*github.Repository, collection *
 }
 
 // check languages of the org from all repos
-func checkOrgLanguage(client *github.Client, repos []*github.Repository) (map[string]int, error) {
+func checkOrgLanguage(client *github.Client, repos []*LiteRepository) (map[string]int, error) {
 	all_langs := make(map[string]int)
 	for index, repo := range repos {
-		langs, _, err := client.Repositories.ListLanguages(context.Background(), *(repo.Owner.Login), *(repo.Name))
+		langs, _, err := client.Repositories.ListLanguages(context.Background(), repo.Owner.GetLogin(), repo.Name)
 		if err != nil {
 			if _, ok := err.(*github.RateLimitError); ok {
 				fmt.Println("hit rate limit, waiting an hour")
@@ -307,10 +327,10 @@ func addToMap(base_map, map_to_add map[string]int) map[string]int {
 } 
 
 // gets single commit start for given list of commits to see changed files and stats as well
-func getSingleCommit(client *github.Client, commits []*github.RepositoryCommit, repo *github.Repository, collection *mongo.Collection) ([]*github.RepositoryCommit, error) {
-	var all_full_commits []*github.RepositoryCommit
+func getSingleCommit(client *github.Client, commits []*github.RepositoryCommit, repo *LiteRepository, collection *mongo.Collection) ([]*LiteCommit, error) {
+	var all_full_commits []*LiteCommit
 	for index, commit := range commits {
-		s_commit, resp, err := client.Repositories.GetCommit(context.Background(), repo.GetOwner().GetLogin(), repo.GetName(), commit.GetSHA())
+		s_commit, resp, err := client.Repositories.GetCommit(context.Background(), repo.Owner.GetLogin(), repo.Name, commit.GetSHA())
 		if err != nil {
 			if resp.StatusCode == 502 { // bad gateway can occur in 1 in 1000, retry immediatly if this happens
 				fmt.Printf("Error 502 while processing commit index: %d. Error: %v\n", index)
@@ -323,18 +343,19 @@ func getSingleCommit(client *github.Client, commits []*github.RepositoryCommit, 
 				return nil, err
 			}
 		}
-		insertResult, err := collection.InsertOne(context.Background(), *s_commit)
+		l_commit := convertToLiteCommit(s_commit)		
+		insertResult, err := collection.InsertOne(context.Background(), *l_commit)
 		if err != nil {
 			log.Fatal(err)
 		}
 		fmt.Println("uploaded google commit to mongo: %s", insertResult.InsertedID)
-		all_full_commits = append(all_full_commits, s_commit)
+		all_full_commits = append(all_full_commits, l_commit)
 		fmt.Printf("Commit index: %d \n", index)
 	}
 	return all_full_commits, nil
 }
 
-// getting contributors from the commits
+// getting contributors from the commits // TODO fix this, need a map
 func getContributors (commits []*github.RepositoryCommit) ([]*Contributor) {
 	var all_contribs []*Contributor
 	for _, commit := range commits {
@@ -345,6 +366,22 @@ func getContributors (commits []*github.RepositoryCommit) ([]*Contributor) {
 		all_contribs = append(all_contribs, contrib)
 	}
 	return all_contribs
+}
+
+func convertToLiteRepo(repo *github.Repository) *LiteRepository {
+	lite_repo := &LiteRepository{
+		Owner: repo.GetOwner(),
+		Name: repo.GetName(),
+	}
+	return lite_repo
+}
+
+func convertToLiteCommit(commit *github.RepositoryCommit) *LiteCommit {
+	lite_commit := &LiteCommit{
+		Author: commit.GetAuthor(),
+		Files: commit.Files,		
+	}
+	return lite_commit
 }
 
 
