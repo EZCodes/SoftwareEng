@@ -1,4 +1,4 @@
-package main
+package FrontEnd
 
 import (
 	"html/template"
@@ -16,7 +16,7 @@ func viewHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func testHandler(w http.ResponseWriter, r *http.Request) {
-	t, err := template.ParseFiles("src/source/index.html")
+	t, err := template.ParseFiles("src/FrontEnd/index.html")
 	if err != nil {
 		fmt.Println("Error parsing template")
 	}

@@ -146,12 +146,6 @@ func main() {
 //		fmt.Printf("Fetched Microsoft repos languages\n")
 	}()
 	
-
-
-	http.HandleFunc("/", handler)
-	http.HandleFunc("/view/", viewHandler)
-	http.HandleFunc("/pattern/", testHandler)
-    log.Fatal(http.ListenAndServe(":8080", nil))
 	
 }
 
