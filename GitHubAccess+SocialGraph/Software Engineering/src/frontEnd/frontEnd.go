@@ -1,13 +1,14 @@
-package FrontEnd
+package main
 
 import (
 	"net/http"
-	"log"
+	"log" 
 )
 
 func main() {
 	http.HandleFunc("/", handler)
 	http.HandleFunc("/view/", viewHandler)
 	http.HandleFunc("/pattern/", testHandler)
-    log.Fatal(http.ListenAndServe(":8080", nil))
+    log.Fatal(http.ListenAndServe(":8081", nil))
+    
 }

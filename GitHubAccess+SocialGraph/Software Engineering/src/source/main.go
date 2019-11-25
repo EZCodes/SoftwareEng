@@ -9,11 +9,8 @@ import (
 	"golang.org/x/oauth2"
 	"time"
 	"log"
-//	"go.mongodb.org/mongo-driver/bson"
     "go.mongodb.org/mongo-driver/mongo"
     "go.mongodb.org/mongo-driver/mongo/options"
-    "net/http"
- //   "encoding/json"
 )
 const possibleRequestFailures = 20 // after this many attempts, we skip
 
@@ -232,7 +229,7 @@ func fetchGoogleRepos(client *github.Client) ([]*LiteRepository, error) {
 	return g_repos, nil;
 }
 
-// separate contributors by orgs(non employee and employees) //TODO CHECK ORGANIZATION NOT COMPANY
+// separate contributors by orgs(non employee and employees) //TODO CHECK ORGANIZATION NOT COMPANY, MAKE A MAP
 func separateByOrgs(contribs []*Contributor, home_company string) ([]*Contributor, []*Contributor) {
 	var employees []*Contributor
 	var non_employees []*Contributor
