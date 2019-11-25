@@ -56,22 +56,18 @@ func main() {
 	    log.Fatal(err)
 	}
 	fmt.Println("Connected to MongoDB!")
-	
 	collection := mongo_client.Database("Software_Engineering").Collection("Microsoft_repos")
-	
 	
 	token, err := ioutil.ReadFile("src/source/config.txt") // file with just Pesonal Access token in it
     if err != nil {
     	log.Fatal(err) 
     }
-    
     ts := oauth2.StaticTokenSource(
 		&oauth2.Token{AccessToken: string(token)},
 	)
-
 	tc := oauth2.NewClient(context.Background(), ts)
-	
 	client := github.NewClient(tc)
+	
 	go func() {
 		microsoft_repos, err := fetchMicrosoftRepos(client);
 	
@@ -121,26 +117,19 @@ func main() {
 			fmt.Printf("Error fetching Microsoft commits: %v\n", err)
 			return
 		}
-		fmt.Printf("Fetched Microsoft commits\n")
-		for index, commit := range google_commits {
-			fmt.Printf("Index: %d , Value: %v \n", index, commit)
+		fmt.Printf("Fetched Microsoft commits\n")		
+		google_languages, err := checkOrgLanguage(client, google_repos)
+		if err != nil {
+			fmt.Printf("Error fetching Google repos languages: %v\n", err)
+			return
 		}
-		for index, commit := range microsoft_commits {
-			fmt.Printf("Index: %d , Value: %v \n", index, commit)
+		fmt.Printf("Fetched Google repos languages\n")
+		microsoft_languages, err := checkOrgLanguage(client, microsoft_repos)
+		if err != nil {
+			fmt.Printf("Error fetching Microsoft repos languages: %v\n", err)
+			return
 		}
-		
-//		google_languages, err := checkOrgLanguage(client, google_repos)
-//		if err != nil {
-//			fmt.Printf("Error fetching Google repos languages: %v\n", err)
-//			return
-//		}
-//		fmt.Printf("Fetched Google repos languages\n")
-//		microsoft_languages, err := checkOrgLanguage(client, microsoft_repos)
-//		if err != nil {
-//			fmt.Printf("Error fetching Microsoft repos languages: %v\n", err)
-//			return
-//		}
-//		fmt.Printf("Fetched Microsoft repos languages\n")
+		fmt.Printf("Fetched Microsoft repos languages\n")
 	}()
 	
 	
