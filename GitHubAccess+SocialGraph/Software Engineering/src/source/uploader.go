@@ -6,6 +6,7 @@ import (
     "go.mongodb.org/mongo-driver/mongo"
     "log"
     "time"
+    "fmt"
 )
 
 // one big struct that we upload to MongoDB

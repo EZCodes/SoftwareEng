@@ -29,6 +29,8 @@ type LiteCommit struct {
 }
 
 //TODO, fetch mongoDB to check if it exists so that we dont overwrite, will need to save progress state however
+// TODO fix the languages, right now its doesnt save lines for the language cause it creates a copy in a loop.
+//TODO also fix the upload, in mongoDB theres only ID visible, but data is passed properly into threads
 func main() { 
 	// get mongoDB username and password
 	m_username, err := ioutil.ReadFile("src/source/username.txt") // file with just mongoDB username in it
