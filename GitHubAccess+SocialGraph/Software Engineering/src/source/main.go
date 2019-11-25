@@ -12,13 +12,9 @@ import (
     "go.mongodb.org/mongo-driver/mongo"
     "go.mongodb.org/mongo-driver/mongo/options"
 )
-const possibleRequestFailures = 20 // after this many attempts, we skip
 
-//describes the information we need about contributor
-type Contributor struct {
-	user *github.User
-	files []github.CommitFile
-}
+var knownGoogleContributors = map[string]string{}
+var knownMicrosoftContributors = map[string]string{}
 
 // describes the Repository, with only the information that we need
 type LiteRepository struct {
@@ -32,7 +28,8 @@ type LiteCommit struct {
 	Files []github.CommitFile
 }
 
-func main() {
+//TODO, fetch mongoDB to check if it exists so that we dont overwrite, will need to save progress state however
+func main() { 
 	// get mongoDB username and password
 	m_username, err := ioutil.ReadFile("src/source/username.txt") // file with just mongoDB username in it
 	if err != nil {
@@ -56,7 +53,19 @@ func main() {
 	    log.Fatal(err)
 	}
 	fmt.Println("Connected to MongoDB!")
-	collection := mongo_client.Database("Software_Engineering").Collection("Microsoft_repos")
+	
+	data_chan := make(chan InformationToUpload, 1)
+	upload_chan := make(chan InformationToUpload, 1)
+	cache_chan := make(chan InformationToUpload, 1)
+	collection := mongo_client.Database("Software_Engineering").Collection("Current_Data")
+	
+	//start uploader thread
+	go uploadToMongo(upload_chan, cache_chan, collection)
+	
+	collection = mongo_client.Database("Software_Engineering").Collection("Cached_Data")
+	
+	// start caching thread
+	go uploadToMongoCache(cache_chan, collection)
 	
 	token, err := ioutil.ReadFile("src/source/config.txt") // file with just Pesonal Access token in it
     if err != nil {
@@ -68,98 +77,76 @@ func main() {
 	tc := oauth2.NewClient(context.Background(), ts)
 	client := github.NewClient(tc)
 	
-	go func() {
-		microsoft_repos, err := fetchMicrosoftRepos(client);
+	var data InformationToUpload
 	
-		if err != nil {
-			fmt.Printf("Error fetching MS repos: %v\n", err)
-			return
-		}
-		fmt.Printf("Fetched MS repos\n")
-	
-		for index, doc := range microsoft_repos {
-			insertResult, err := collection.InsertOne(context.Background(), *doc)
-			if err != nil {
-				log.Fatal(err)
-			}
-			fmt.Println("%d uploaded microsoft repo to mongo: %d",index , insertResult.InsertedID)
-		}
-	
-		google_repos, err := fetchGoogleRepos(client);
-	
-		if err != nil {
-			fmt.Printf("Error fetching Google repos: %v\n", err)
-			return
-		}
-		fmt.Printf("Fetched Google repos\n")
-	
-		collection = mongo_client.Database("Software_Engineering").Collection("Google_repos")
-
-		for index, doc := range google_repos {
-			insertResult, err := collection.InsertOne(context.Background(), *doc)
-			if err != nil {
-				log.Fatal(err)
-			}
-			fmt.Println("%d uploaded google repo to mongo: %d", index, insertResult.InsertedID)
-		}
-
-		collection = mongo_client.Database("Software_Engineering").Collection("Google_commits")
-		google_commits, err := getCommits(client, google_repos, collection)
-		if err != nil {
-			fmt.Printf("Error fetching Google commits: %v\n", err)
-			return
-		}
-		fmt.Printf("Fetched Google commits\n")
-	
-		collection = mongo_client.Database("Software_Engineering").Collection("Microsoft_commits")
-		microsoft_commits, err := getCommits(client, microsoft_repos, collection)
-		if err != nil {
-			fmt.Printf("Error fetching Microsoft commits: %v\n", err)
-			return
-		}
-		fmt.Printf("Fetched Microsoft commits\n")		
-		google_languages, err := checkOrgLanguage(client, google_repos)
-		if err != nil {
-			fmt.Printf("Error fetching Google repos languages: %v\n", err)
-			return
-		}
-		fmt.Printf("Fetched Google repos languages\n")
-		microsoft_languages, err := checkOrgLanguage(client, microsoft_repos)
-		if err != nil {
-			fmt.Printf("Error fetching Microsoft repos languages: %v\n", err)
-			return
-		}
-		fmt.Printf("Fetched Microsoft repos languages\n")
-	}()
-	
-	
-}
-
-//gets all languages and lines for given languages
-func getContributorsLanguages(contribs []*Contributor) map[string]int {
-	all_langs := make(map[string]int)
-	all_langs["Other"] = 0;
-	for _, contrib := range contribs {
-		for _, file := range contrib.files {
-			splitted_string := strings.Split(file.GetFilename(), ".")
-			extension := splitted_string[len(splitted_string)-1]
-			language, exists := extensionMap[extension]
-			if exists {
-				lines, ex := all_langs[language]
-				if ex{
-					all_langs[language] = lines+file.GetChanges()
-				} else {
-					all_langs[language] = file.GetChanges()
-				}
-			} else {
-				lines, _ := all_langs["Other"] // we manually created it, so it will exist
-				all_langs["Other"] = lines + file.GetChanges()
-			}
-		}
+	microsoft_repos, err := fetchMicrosoftRepos(client);	
+	if err != nil {
+		fmt.Printf("Error fetching MS repos: %v\n", err)
+		return
 	}
-	return all_langs
+	fmt.Printf("Fetched MS repos\n")
+	
+	google_repos, err := fetchGoogleRepos(client);	
+	if err != nil {
+		fmt.Printf("Error fetching Google repos: %v\n", err)
+		return
+	}
+	fmt.Printf("Fetched Google repos\n")
+	data.all_repos_number = len(google_repos) + len(microsoft_repos)
+	data.google_repos_number = len(google_repos)
+	data.microsoft_repos_number = len(microsoft_repos)
+	
+	upload_chan <- data
+	data_chan <- data
+
+	g_chan := make(chan int, 1)
+	ms_chan := make(chan int, 1)
+	
+	// Start google fetch thread
+	go startGoogleCommitFetch(client, google_repos, upload_chan, data_chan, g_chan)
+
+	
+	// Start MS fetch thread
+	go startMicrosoftCommitFetch(client, microsoft_repos, upload_chan, data_chan, ms_chan)
+	
+	
+	if	<-g_chan == 1 {
+		log.Printf("Fetched Google commits\n")
+	}
+	if <-ms_chan ==1 {
+		log.Printf("Fetched Microsoft commits\n")
+	}
+	
+	close(g_chan)
+	close(ms_chan)
+	close(upload_chan)
+	close(data_chan)
+	close(cache_chan)
+	
+	log.Println("ALL FETCHING OPERATIONS SUCCESSFULLY FINISHED!!!")				
 }
 
+// Helper function to start a thread
+func startGoogleCommitFetch(client *github.Client, google_repos []*LiteRepository, upload_chan, data_chan chan InformationToUpload, g_chan chan int) {
+	err := getCommits(client, google_repos, upload_chan, data_chan)
+	if err != nil {
+		fmt.Printf("Error fetching Google commits: %v\n", err)
+		log.Fatal(err)
+	}	
+	g_chan <- 1
+}
+
+// Helper function to start a thread
+func startMicrosoftCommitFetch(client *github.Client, microsoft_repos []*LiteRepository, upload_chan, data_chan chan InformationToUpload, ms_chan chan int) {
+	err := getCommits(client, microsoft_repos, upload_chan, data_chan)
+	if err != nil {
+		fmt.Printf("Error fetching Microsoft commits: %v\n", err)
+		log.Fatal(err)
+	}	
+	ms_chan <- 1
+}
+
+//Fetches all Microsoft repositories
 func fetchMicrosoftRepos(client *github.Client) ([]*LiteRepository, error) {
 	var m_repos []*LiteRepository
 	opt := &github.RepositoryListByOrgOptions{
@@ -189,6 +176,7 @@ func fetchMicrosoftRepos(client *github.Client) ([]*LiteRepository, error) {
 	return m_repos, nil;
 }
 
+//Fetches all Google Repositories
 func fetchGoogleRepos(client *github.Client) ([]*LiteRepository, error) {
 	var g_repos []*LiteRepository
 	opt := &github.RepositoryListByOrgOptions{
@@ -218,27 +206,13 @@ func fetchGoogleRepos(client *github.Client) ([]*LiteRepository, error) {
 	return g_repos, nil;
 }
 
-// separate contributors by orgs(non employee and employees) //TODO CHECK ORGANIZATION NOT COMPANY, MAKE A MAP
-func separateByOrgs(contribs []*Contributor, home_company string) ([]*Contributor, []*Contributor) {
-	var employees []*Contributor
-	var non_employees []*Contributor
-	for _, contrib := range contribs {
-		if strings.ToLower(contrib.user.GetCompany()) == strings.ToLower(home_company) {
-			employees = append(employees, contrib)
-		} else {
-			non_employees = append(non_employees, contrib)
-		}
-	}
-	return employees, non_employees
-}
-
-// gets all commits for provided repositories
-func getCommits( client *github.Client, repos []*LiteRepository, collection *mongo.Collection) ([]*LiteCommit, error) {
-	var all_commits []*LiteCommit
+// Gets all commits for provided repositories
+func getCommits( client *github.Client, repos []*LiteRepository, upload_chan, data_chan chan InformationToUpload) error {
 	opt := &github.CommitsListOptions{
-		Since: (time.Date(2019, 1, 1, 1, 1, 1, 1, time.FixedZone("CET", 1))),
+		//Since: (time.Date(2019, 1, 1, 1, 1, 1, 1, time.FixedZone("CET", 1))),
 		ListOptions: github.ListOptions{PerPage: 1000},
 	}
+	log.Println("Starting commits fetch")
 	for index, repo := range repos {
 		for {
 			commits, resp, err := client.Repositories.ListCommits(context.Background(), repo.Owner.GetLogin(), repo.Name, opt)
@@ -254,45 +228,24 @@ func getCommits( client *github.Client, repos []*LiteRepository, collection *mon
 					time.Sleep(time.Hour*1 + time.Minute*3)
 					continue
 				} else {
-					return nil, err
+					return err
 				}
 			}
-			s_commits, err := getSingleCommit(client, commits, repo, collection)
+			err = getSingleCommit(client, commits, repo, upload_chan, data_chan)
 			if err != nil {
-				return nil, err
+				return err
 			}
-			all_commits = append(all_commits, s_commits...)
 			if resp.NextPage == 0 {
 				break
 			}
 			opt.Page = resp.NextPage // if the next page exists, get it
 		}
-		fmt.Printf("Repo index: %d \n", index)
+		log.Printf("Repo index: %d \n", index)
 	}
-	return all_commits, nil
+	return nil
 }
 
-// check languages of the org from all repos
-func checkOrgLanguage(client *github.Client, repos []*LiteRepository) (map[string]int, error) {
-	all_langs := make(map[string]int)
-	for index, repo := range repos {
-		langs, _, err := client.Repositories.ListLanguages(context.Background(), repo.Owner.GetLogin(), repo.Name)
-		if err != nil {
-			if _, ok := err.(*github.RateLimitError); ok {
-				fmt.Println("hit rate limit, waiting an hour")
-				time.Sleep(time.Hour*1 + time.Minute*3)
-				continue
-			} else {
-				return nil, err
-			}
-		}
-		all_langs = addToMap(all_langs, langs)
-		fmt.Printf("Repo index: %d \n", index)
-	}
-	return all_langs, nil
-}
-
-// adds values from one map to another, if key exists, sum the values
+// Adds values from one map to another, if key exists, sum the values
 func addToMap(base_map, map_to_add map[string]int) map[string]int {
 	for key, value := range map_to_add {
 		val, ex := base_map[key]
@@ -306,46 +259,221 @@ func addToMap(base_map, map_to_add map[string]int) map[string]int {
 	return base_map
 } 
 
-// gets single commit start for given list of commits to see changed files and stats as well
-func getSingleCommit(client *github.Client, commits []*github.RepositoryCommit, repo *LiteRepository, collection *mongo.Collection) ([]*LiteCommit, error) {
-	var all_full_commits []*LiteCommit
+// Gets single commit start for given list of commits to see changed files and stats as well
+func getSingleCommit(client *github.Client, commits []*github.RepositoryCommit, repo *LiteRepository, upload_chan, data_chan chan InformationToUpload) error {
 	for index, commit := range commits {
 		s_commit, resp, err := client.Repositories.GetCommit(context.Background(), repo.Owner.GetLogin(), repo.Name, commit.GetSHA())
 		if err != nil {
 			if resp.StatusCode == 502 { // bad gateway can occur in 1 in 1000, retry immediatly if this happens
-				fmt.Printf("Error 502 while processing commit index: %d. Error: %v\n", index)
+				log.Printf("Error 502 while processing commit index: %d. Error: %v\n", index)
 				continue
 			} else if _, ok := err.(*github.RateLimitError); ok {
-				fmt.Println("hit rate limit, waiting an hour")
+				log.Println("hit rate limit, waiting an hour")
 				time.Sleep(time.Hour*1 + time.Minute*3)
 				continue
 			} else {
-				return nil, err
+				return err
 			}
 		}
-		l_commit := convertToLiteCommit(s_commit)		
-		insertResult, err := collection.InsertOne(context.Background(), *l_commit)
-		if err != nil {
-			log.Fatal(err)
+		
+		if s_commit.GetAuthor() != nil { // we skip autogenerated commits, not really our metrics
+			languages := getCommitLanguages(s_commit.Files)
+			isNew, isEmployee, err := checkIfNewAndEmployee(client, s_commit.GetAuthor(), repo.Owner.GetLogin())
+			if err != nil {
+				return err
+			}
+			data := <-data_chan
+			for lang, val := range languages {
+				if repo.Owner.GetLogin() == "google" {
+					addLangToGoogleInfo(lang, &data, isNew, val, isEmployee)
+				} else if repo.Owner.GetLogin() == "microsoft" {
+					addLangToMicrosoftInfo(lang, &data, isNew, val, isEmployee)
+				}
+			}
+			data_chan <- data	
+			upload_chan <- data
 		}
-		fmt.Println("uploaded google commit to mongo: %s", insertResult.InsertedID)
-		all_full_commits = append(all_full_commits, l_commit)
-		fmt.Printf("Commit index: %d \n", index)
 	}
-	return all_full_commits, nil
+	return nil
 }
 
-// getting contributors from the commits // TODO fix this, need a map
-func getContributors (commits []*github.RepositoryCommit) ([]*Contributor) {
-	var all_contribs []*Contributor
-	for _, commit := range commits {
-		contrib := &Contributor{
-			user : commit.GetAuthor(),
-			files : commit.Files,
+//gets all languages and lines for given languages
+func getCommitLanguages(files []github.CommitFile) map[string]int {
+	all_langs := make(map[string]int)
+	all_langs["Other"] = 0;
+	for _, file := range files {
+		splitted_string := strings.Split(file.GetFilename(), ".")
+		extension := splitted_string[len(splitted_string)-1]
+		language, exists := extensionMap[extension]
+		if exists {
+			lines, ex := all_langs[language]
+			if ex{
+				all_langs[language] = lines+file.GetChanges()
+			} else {
+				all_langs[language] = file.GetChanges()
+			}
+		} else {
+			lines, _ := all_langs["Other"] // we manually created it, so it will exist
+			all_langs["Other"] = lines + file.GetChanges()
 		}
-		all_contribs = append(all_contribs, contrib)
 	}
-	return all_contribs
+	return all_langs
+}
+
+// Checks whenever a user is an employee of a given org
+// If its the first time encountering this user, we add him to the map to avoid duplicates
+func checkIfNewAndEmployee (client *github.Client, author *github.User, org string) (int, bool, error) {
+	var knownContributors map[string]string
+	if org == "google" {
+		knownContributors = knownGoogleContributors
+	} else if org == "microsoft" {
+		knownContributors = knownMicrosoftContributors
+	}
+	
+	empsOrg, ex := knownContributors[author.GetLogin()]
+
+	if !ex {
+		opt := &github.ListOptions{
+			PerPage: 100,
+		}
+		var all_orgs []*github.Organization
+		for {
+			orgs, resp, err := client.Organizations.List(context.Background(), author.GetLogin(), opt)
+			if err != nil {
+				if _, ok := err.(*github.RateLimitError); ok {
+					fmt.Println("hit rate limit, waiting an hour")
+					time.Sleep(time.Hour*1 + time.Minute*3)
+					continue
+				} else if resp.StatusCode == 502 { // bad gateway can occur in 1 in 1000, retry immediatly if this happens
+					log.Printf("Error 502 while processing commit. Error: %v\n",)
+					continue
+				} else {
+					return -1, false, err
+				}
+			}
+			all_orgs = append(all_orgs, orgs...)
+			if resp.NextPage == 0 {
+				break
+			}
+			opt.Page = resp.NextPage // if next page exists, get next page
+		}
+		isEmp := checkIfEmp(all_orgs, org)
+		
+		if isEmp {
+			knownContributors[author.GetLogin()] = org
+			pushMapUpdate(knownContributors, org)
+			return 1, true, nil
+		} else {
+			knownContributors[author.GetLogin()] = "Other"
+			pushMapUpdate(knownContributors, org)
+			return 1, false, nil
+		}
+	}
+	if empsOrg == org {
+		return 0, true, nil
+	} else {
+		return 0, false, nil
+	}
+}
+
+// checks if an org is in the list of the orgs of the user
+func checkIfEmp(orgs []*github.Organization, emp_org string) bool {
+	for _, org := range orgs {
+		if org.GetLogin() == emp_org {
+			return true
+		}
+	}
+	return false
+} 
+
+// Helper function to update global map
+// Mostly here for readability
+func pushMapUpdate(known_contribs map[string]string, org string) {
+	if org == "google" {
+		knownGoogleContributors = known_contribs
+	} else if org == "microsoft" {
+		knownMicrosoftContributors = known_contribs
+	}
+}
+
+// Updates Google information
+func addLangToGoogleInfo(lang_name string, data *InformationToUpload, isNewEmployee, lang_value int, isEmployee bool){
+	data.google_total_lines_of_code = data.google_total_lines_of_code + lang_value
+	if isEmployee{
+		for _, lang := range data.google_contributors.employee_languages {
+			if lang.name == lang_name {
+				lang.lines_of_changes = lang.lines_of_changes + lang_value
+				data.google_contributors.employee_count = data.google_contributors.employee_count + isNewEmployee
+				data.google_contributors.employees_line_count = data.google_contributors.employees_line_count + lang_value
+				return 
+			}
+		}
+		new_lang := Language{
+			name: lang_name,
+			lines_of_changes: lang_value,
+		}
+		data.google_contributors.employee_languages =  append(data.google_contributors.employee_languages, new_lang)
+		data.google_contributors.employee_count = data.google_contributors.employee_count + isNewEmployee
+		data.google_contributors.employees_line_count = data.google_contributors.employees_line_count + lang_value
+		return 
+	} else {
+		for _, lang := range data.google_contributors.non_employee_languages {
+			if lang.name == lang_name {
+				lang.lines_of_changes = lang.lines_of_changes + lang_value
+				data.google_contributors.non_employee_count = data.google_contributors.non_employee_count + isNewEmployee
+				data.google_contributors.non_employees_line_count = data.google_contributors.non_employees_line_count + lang_value
+				return 
+			}
+		}
+		new_lang := Language{
+			name: lang_name,
+			lines_of_changes: lang_value,
+		}
+		data.google_contributors.non_employee_languages =  append(data.google_contributors.non_employee_languages, new_lang)
+		data.google_contributors.non_employee_count = data.google_contributors.non_employee_count + isNewEmployee
+		data.google_contributors.non_employees_line_count = data.google_contributors.non_employees_line_count + lang_value
+		return
+	}
+}
+
+// Updates Microsoft information
+func addLangToMicrosoftInfo(lang_name string, data *InformationToUpload, isNewEmployee, lang_value int, isEmployee bool){
+	data.microsoft_total_lines_of_code = data.microsoft_total_lines_of_code + lang_value
+	if isEmployee{
+		for _, lang := range data.microsoft_contributors.employee_languages {
+			if lang.name == lang_name {
+				lang.lines_of_changes = lang.lines_of_changes + lang_value
+				data.microsoft_contributors.employee_count = data.microsoft_contributors.employee_count + isNewEmployee
+				data.microsoft_contributors.employees_line_count = data.microsoft_contributors.employees_line_count + lang_value
+				return 
+			}
+		}
+		new_lang := Language{
+			name: lang_name,
+			lines_of_changes: lang_value,
+		}
+		data.microsoft_contributors.employee_languages =  append(data.microsoft_contributors.employee_languages, new_lang)
+		data.microsoft_contributors.employee_count = data.microsoft_contributors.employee_count + isNewEmployee
+		data.microsoft_contributors.employees_line_count = data.microsoft_contributors.employees_line_count + lang_value
+		return 
+	} else {
+		for _, lang := range data.microsoft_contributors.non_employee_languages {
+			if lang.name == lang_name {
+				lang.lines_of_changes = lang.lines_of_changes + lang_value
+				data.microsoft_contributors.non_employee_count = data.microsoft_contributors.non_employee_count + isNewEmployee
+				data.microsoft_contributors.non_employees_line_count = data.microsoft_contributors.non_employees_line_count + lang_value
+				return 
+			}
+		}
+		new_lang := Language{
+			name: lang_name,
+			lines_of_changes: lang_value,
+		}
+		data.microsoft_contributors.non_employee_languages =  append(data.microsoft_contributors.non_employee_languages, new_lang)
+		data.microsoft_contributors.non_employee_count = data.microsoft_contributors.non_employee_count + isNewEmployee
+		data.microsoft_contributors.non_employees_line_count = data.microsoft_contributors.non_employees_line_count + lang_value
+		return
+	}
 }
 
 func convertToLiteRepo(repo *github.Repository) *LiteRepository {
@@ -356,12 +484,5 @@ func convertToLiteRepo(repo *github.Repository) *LiteRepository {
 	return lite_repo
 }
 
-func convertToLiteCommit(commit *github.RepositoryCommit) *LiteCommit {
-	lite_commit := &LiteCommit{
-		Author: commit.GetAuthor(),
-		Files: commit.Files,		
-	}
-	return lite_commit
-}
 
 

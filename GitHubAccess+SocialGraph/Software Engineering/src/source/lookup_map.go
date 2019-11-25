@@ -21,5 +21,6 @@ var extensionMap = map[string]string{
 	".cpp":"C++",
 	".cxx":"C++",
 	".cc":"C++",
+	".go":"GoLang",
 }
 
