@@ -1,12 +1,12 @@
 // https://observablehq.com/@d3/zoomable-circle-packing@158
 export default function define(runtime, observer) {
   const main = runtime.module();
-  const fileAttachments = new Map([["flare-2.json",new URL("./files/data",import.meta.url)]]);
+  const fileAttachments = new Map([["flare-2.json",new URL("./files/test",import.meta.url)]]);
   main.builtin("FileAttachment", runtime.fileAttachments(name => fileAttachments.get(name)));
   main.variable(observer()).define(["md"], function(md){return(
-md`# Zoomable Circle Packing
+md`# Microsoft VS Google Open Source comparison
 
-Click to zoom in or out.`
+Click on the nodes to zoom in or zoom out of them!`
 )});
   main.variable(observer("chart")).define("chart", ["pack","data","d3","width","height","color"], function(pack,data,d3,width,height,color)
 {

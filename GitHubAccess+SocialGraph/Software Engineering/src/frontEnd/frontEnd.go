@@ -8,6 +8,7 @@ import (
     "go.mongodb.org/mongo-driver/mongo/options"
     "go.mongodb.org/mongo-driver/bson"
     "io/ioutil"
+    "encoding/json"
 )
 
 //Information received from MongoDB
@@ -74,11 +75,71 @@ func main() {
 	    log.Fatal(err)
 	}
 	log.Println("Data fetched")
-
 	
-	http.HandleFunc("/index/", indexHandler)
+	google_emp_langs := transferLangsFromDataToOutput(data.Google_contributors.Employee_languages)
+	google_non_emp_langs := transferLangsFromDataToOutput(data.Google_contributors.Non_employee_languages)
+	ms_emp_langs := transferLangsFromDataToOutput(data.Microsoft_contributors.Employee_languages)
+	ms_non_emp_langs := transferLangsFromDataToOutput(data.Microsoft_contributors.Non_employee_languages)
+	
+	outputData := FirstLevel{
+		Name: "Open Source Comparison",
+		NextLevel : []SecondLevel{
+			{
+				Name: "Google and Microsoft Repositories",
+				NextLevel: []ThirdLevel{
+					{
+						Name: "Google Repositories",
+						NextLevel: []ForthLevel{
+							{
+								Name: "Employees",
+								Values: google_emp_langs,
+							},
+							{
+								Name: "Non-Employees",
+								Values: google_non_emp_langs,
+							},
+						},
+					},{
+						Name: "Microsoft Repositories",
+						NextLevel: []ForthLevel{
+							{
+								Name: "Employees",
+								Values: ms_emp_langs,
+							},
+							{
+								Name: "Non-Employees",
+								Values: ms_non_emp_langs,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	
+	dataJSON, err := json.MarshalIndent(outputData, "", " ")
+	if err != nil {
+        log.Fatal(err)
+    }
+	
+	err = ioutil.WriteFile("src/frontEnd/static/files/test", dataJSON, 0644)
+	if err != nil {
+        log.Fatal(err)
+    }
+	log.Println("Test JSON written")
+	
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("src/frontEnd/static"))))
     log.Fatal(http.ListenAndServe(":8080", nil))
-    
-    
+}
+
+//Transfers languages values from fetched data into output that is gonna be on the graph
+func transferLangsFromDataToOutput(langs []Languages) []Fields {
+	var values []Fields
+	for _, lang := range langs {
+		var value Fields
+		value.Name = lang.Name
+		value.Value = lang.Lines_of_changes
+		values = append(values, value)
+	}
+	return values
 }

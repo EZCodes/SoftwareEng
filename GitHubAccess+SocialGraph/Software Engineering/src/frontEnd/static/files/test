@@ -1,0 +1,56 @@
+{
+ "name": "Open Source Comparison",
+ "children": [
+  {
+   "name": "Google and Microsoft Repositories",
+   "children": [
+    {
+     "name": "Google Repositories",
+     "children": [
+      {
+       "name": "Employees",
+       "children": [
+        {
+         "name": "Other",
+         "value": 94527
+        }
+       ]
+      },
+      {
+       "name": "Non-Employees",
+       "children": [
+        {
+         "name": "Other",
+         "value": 1326658
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "name": "Microsoft Repositories",
+     "children": [
+      {
+       "name": "Employees",
+       "children": [
+        {
+         "name": "Other",
+         "value": 4872483
+        }
+       ]
+      },
+      {
+       "name": "Non-Employees",
+       "children": [
+        {
+         "name": "Other",
+         "value": 4665789
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}
