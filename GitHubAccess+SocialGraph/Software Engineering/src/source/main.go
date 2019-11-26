@@ -28,9 +28,7 @@ type LiteCommit struct {
 	Files []github.CommitFile
 }
 
-//TODO, fetch mongoDB to check if it exists so that we dont overwrite, will need to save progress state however
-// TODO fix the languages, right now its doesnt save lines for the language cause it creates a copy in a loop.
-//TODO also fix the upload, in mongoDB theres only ID visible, but data is passed properly into threads
+//TODO if have time, fetch mongoDB to check if it exists so that we dont overwrite, will need to save progress state however
 func main() { 
 	// get mongoDB username and password
 	m_username, err := ioutil.ReadFile("src/source/username.txt") // file with just mongoDB username in it
@@ -94,9 +92,9 @@ func main() {
 		return
 	}
 	fmt.Printf("Fetched Google repos\n")
-	data.all_repos_number = len(google_repos) + len(microsoft_repos)
-	data.google_repos_number = len(google_repos)
-	data.microsoft_repos_number = len(microsoft_repos)
+	data.All_repos_number = len(google_repos) + len(microsoft_repos)
+	data.Google_repos_number = len(google_repos)
+	data.Microsoft_repos_number = len(microsoft_repos)
 	
 	upload_chan <- data
 	data_chan <- data
@@ -400,80 +398,80 @@ func pushMapUpdate(known_contribs map[string]string, org string) {
 
 // Updates Google information
 func addLangToGoogleInfo(lang_name string, data *InformationToUpload, isNewEmployee, lang_value int, isEmployee bool){
-	data.google_total_lines_of_code = data.google_total_lines_of_code + lang_value
+	data.Google_total_lines_of_code = data.Google_total_lines_of_code + lang_value
 	if isEmployee{
-		for _, lang := range data.google_contributors.employee_languages {
-			if lang.name == lang_name {
-				lang.lines_of_changes = lang.lines_of_changes + lang_value
-				data.google_contributors.employee_count = data.google_contributors.employee_count + isNewEmployee
-				data.google_contributors.employees_line_count = data.google_contributors.employees_line_count + lang_value
+		for index, lang := range data.Google_contributors.Employee_languages {
+			if lang.Name == lang_name {
+				data.Google_contributors.Employee_languages[index].Lines_of_changes = lang.Lines_of_changes + lang_value
+				data.Google_contributors.Employee_count = data.Google_contributors.Employee_count + isNewEmployee
+				data.Google_contributors.Employees_line_count = data.Google_contributors.Employees_line_count + lang_value
 				return 
 			}
 		}
 		new_lang := Language{
-			name: lang_name,
-			lines_of_changes: lang_value,
+			Name: lang_name,
+			Lines_of_changes: lang_value,
 		}
-		data.google_contributors.employee_languages =  append(data.google_contributors.employee_languages, new_lang)
-		data.google_contributors.employee_count = data.google_contributors.employee_count + isNewEmployee
-		data.google_contributors.employees_line_count = data.google_contributors.employees_line_count + lang_value
+		data.Google_contributors.Employee_languages =  append(data.Google_contributors.Employee_languages, new_lang)
+		data.Google_contributors.Employee_count = data.Google_contributors.Employee_count + isNewEmployee
+		data.Google_contributors.Employees_line_count = data.Google_contributors.Employees_line_count + lang_value
 		return 
 	} else {
-		for _, lang := range data.google_contributors.non_employee_languages {
-			if lang.name == lang_name {
-				lang.lines_of_changes = lang.lines_of_changes + lang_value
-				data.google_contributors.non_employee_count = data.google_contributors.non_employee_count + isNewEmployee
-				data.google_contributors.non_employees_line_count = data.google_contributors.non_employees_line_count + lang_value
+		for index, lang := range data.Google_contributors.Non_employee_languages {
+			if lang.Name == lang_name {
+				data.Google_contributors.Non_employee_languages[index].Lines_of_changes = lang.Lines_of_changes + lang_value
+				data.Google_contributors.Non_employee_count = data.Google_contributors.Non_employee_count + isNewEmployee
+				data.Google_contributors.Non_employees_line_count = data.Google_contributors.Non_employees_line_count + lang_value
 				return 
 			}
 		}
 		new_lang := Language{
-			name: lang_name,
-			lines_of_changes: lang_value,
+			Name: lang_name,
+			Lines_of_changes: lang_value,
 		}
-		data.google_contributors.non_employee_languages =  append(data.google_contributors.non_employee_languages, new_lang)
-		data.google_contributors.non_employee_count = data.google_contributors.non_employee_count + isNewEmployee
-		data.google_contributors.non_employees_line_count = data.google_contributors.non_employees_line_count + lang_value
+		data.Google_contributors.Non_employee_languages =  append(data.Google_contributors.Non_employee_languages, new_lang)
+		data.Google_contributors.Non_employee_count = data.Google_contributors.Non_employee_count + isNewEmployee
+		data.Google_contributors.Non_employees_line_count = data.Google_contributors.Non_employees_line_count + lang_value
 		return
 	}
 }
 
 // Updates Microsoft information
 func addLangToMicrosoftInfo(lang_name string, data *InformationToUpload, isNewEmployee, lang_value int, isEmployee bool){
-	data.microsoft_total_lines_of_code = data.microsoft_total_lines_of_code + lang_value
+	data.Microsoft_total_lines_of_code = data.Microsoft_total_lines_of_code + lang_value
 	if isEmployee{
-		for _, lang := range data.microsoft_contributors.employee_languages {
-			if lang.name == lang_name {
-				lang.lines_of_changes = lang.lines_of_changes + lang_value
-				data.microsoft_contributors.employee_count = data.microsoft_contributors.employee_count + isNewEmployee
-				data.microsoft_contributors.employees_line_count = data.microsoft_contributors.employees_line_count + lang_value
+		for index, lang := range data.Microsoft_contributors.Employee_languages {
+			if lang.Name == lang_name {
+				data.Microsoft_contributors.Employee_languages[index].Lines_of_changes = lang.Lines_of_changes + lang_value
+				data.Microsoft_contributors.Employee_count = data.Microsoft_contributors.Employee_count + isNewEmployee
+				data.Microsoft_contributors.Employees_line_count = data.Microsoft_contributors.Employees_line_count + lang_value
 				return 
 			}
 		}
 		new_lang := Language{
-			name: lang_name,
-			lines_of_changes: lang_value,
+			Name: lang_name,
+			Lines_of_changes: lang_value,
 		}
-		data.microsoft_contributors.employee_languages =  append(data.microsoft_contributors.employee_languages, new_lang)
-		data.microsoft_contributors.employee_count = data.microsoft_contributors.employee_count + isNewEmployee
-		data.microsoft_contributors.employees_line_count = data.microsoft_contributors.employees_line_count + lang_value
+		data.Microsoft_contributors.Employee_languages =  append(data.Microsoft_contributors.Employee_languages, new_lang)
+		data.Microsoft_contributors.Employee_count = data.Microsoft_contributors.Employee_count + isNewEmployee
+		data.Microsoft_contributors.Employees_line_count = data.Microsoft_contributors.Employees_line_count + lang_value
 		return 
 	} else {
-		for _, lang := range data.microsoft_contributors.non_employee_languages {
-			if lang.name == lang_name {
-				lang.lines_of_changes = lang.lines_of_changes + lang_value
-				data.microsoft_contributors.non_employee_count = data.microsoft_contributors.non_employee_count + isNewEmployee
-				data.microsoft_contributors.non_employees_line_count = data.microsoft_contributors.non_employees_line_count + lang_value
+		for index, lang := range data.Microsoft_contributors.Non_employee_languages {
+			if lang.Name == lang_name {
+				data.Microsoft_contributors.Non_employee_languages[index].Lines_of_changes = lang.Lines_of_changes + lang_value
+				data.Microsoft_contributors.Non_employee_count = data.Microsoft_contributors.Non_employee_count + isNewEmployee
+				data.Microsoft_contributors.Non_employees_line_count = data.Microsoft_contributors.Non_employees_line_count + lang_value
 				return 
 			}
 		}
 		new_lang := Language{
-			name: lang_name,
-			lines_of_changes: lang_value,
+			Name: lang_name,
+			Lines_of_changes: lang_value,
 		}
-		data.microsoft_contributors.non_employee_languages =  append(data.microsoft_contributors.non_employee_languages, new_lang)
-		data.microsoft_contributors.non_employee_count = data.microsoft_contributors.non_employee_count + isNewEmployee
-		data.microsoft_contributors.non_employees_line_count = data.microsoft_contributors.non_employees_line_count + lang_value
+		data.Microsoft_contributors.Non_employee_languages =  append(data.Microsoft_contributors.Non_employee_languages, new_lang)
+		data.Microsoft_contributors.Non_employee_count = data.Microsoft_contributors.Non_employee_count + isNewEmployee
+		data.Microsoft_contributors.Non_employees_line_count = data.Microsoft_contributors.Non_employees_line_count + lang_value
 		return
 	}
 }

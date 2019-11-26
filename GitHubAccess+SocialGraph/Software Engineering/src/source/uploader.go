@@ -6,37 +6,36 @@ import (
     "go.mongodb.org/mongo-driver/mongo"
     "log"
     "time"
-    "fmt"
 )
 
 // one big struct that we upload to MongoDB
 type InformationToUpload struct {
-	all_repos_number int
-	google_repos_number int
-	microsoft_repos_number int
+	All_repos_number int
+	Google_repos_number int
+	Microsoft_repos_number int
 	
-	google_total_lines_of_code int
-	google_contributors ContributorsInformation
+	Google_total_lines_of_code int
+	Google_contributors ContributorsInformation
 	
-	microsoft_total_lines_of_code int
-	microsoft_contributors ContributorsInformation
+	Microsoft_total_lines_of_code int
+	Microsoft_contributors ContributorsInformation
 }
 
 //describes the information we need about contributors
 type ContributorsInformation struct {	
-	employee_count int
-	non_employee_count int
-	employees_line_count int
-	non_employees_line_count int
+	Employee_count int
+	Non_employee_count int
+	Employees_line_count int
+	Non_employees_line_count int
 	
-	employee_languages []Language
-	non_employee_languages []Language
+	Employee_languages []Language
+	Non_employee_languages []Language
 }
 
 //information about languages used
 type Language struct {
-	name string
-	lines_of_changes int
+	Name string
+	Lines_of_changes int
 }
 
 // Will upload out information to the MongoDB
