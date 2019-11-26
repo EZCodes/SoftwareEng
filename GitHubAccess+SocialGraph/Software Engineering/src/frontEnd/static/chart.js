@@ -1,14 +1,15 @@
-<html>
-	<head>    
-		<title>Learn D3 in 5 minutes</title>
-	</head>
+// https://observablehq.com/@d3/zoomable-circle-packing@158
+export default function define(runtime, observer) {
+  const main = runtime.module();
+  const fileAttachments = new Map([["flare-2.json",new URL("./files/data",import.meta.url)]]);
+  main.builtin("FileAttachment", runtime.fileAttachments(name => fileAttachments.get(name)));
+  main.variable(observer()).define(["md"], function(md){return(
+md`# Zoomable Circle Packing
 
-<body>
-<h3>Today is a beautiful day!!</h3>
-<script src='https://d3js.org/d3.v4.min.js'></script>
-<script>   d3.select('h3').style('color', 'darkblue');  d3.select('h3').style('font-size', '24px');</script>
-
-<script> chart = {
+Click to zoom in or out.`
+)});
+  main.variable(observer("chart")).define("chart", ["pack","data","d3","width","height","color"], function(pack,data,d3,width,height,color)
+{
   const root = pack(data);
   let focus = root;
   let view;
@@ -76,27 +77,35 @@
 
   return svg.node();
 }
-data = Object {
-  name: "flare"
-  children: Array(10) [Object, Object, Object, Object, Object, Object, Object, Object, Object, Object]
-}
-
-
-pack = data => d3.pack()
+);
+  main.variable(observer("data")).define("data", ["FileAttachment"], function(FileAttachment){return(
+FileAttachment("flare-2.json").json()
+)});
+  main.variable(observer("pack")).define("pack", ["d3","width","height"], function(d3,width,height){return(
+data => d3.pack()
     .size([width, height])
     .padding(3)
   (d3.hierarchy(data)
     .sum(d => d.value)
     .sort((a, b) => b.value - a.value))
-    
-width = 932
-height = 932
-format = d3.format(",d")
-color = d3.scaleLinear()
+)});
+  main.variable(observer("width")).define("width", function(){return(
+932
+)});
+  main.variable(observer("height")).define("height", ["width"], function(width){return(
+width
+)});
+  main.variable(observer("format")).define("format", ["d3"], function(d3){return(
+d3.format(",d")
+)});
+  main.variable(observer("color")).define("color", ["d3"], function(d3){return(
+d3.scaleLinear()
     .domain([0, 5])
     .range(["hsl(152,80%,80%)", "hsl(228,30%,40%)"])
     .interpolate(d3.interpolateHcl)
-d3 = require("d3@5")
-</script>
-</body>
-</html>
+)});
+  main.variable(observer("d3")).define("d3", ["require"], function(require){return(
+require("d3@5")
+)});
+  return main;
+}

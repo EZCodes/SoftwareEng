@@ -76,9 +76,8 @@ func main() {
 	log.Println("Data fetched")
 
 	
-	http.HandleFunc("/", handler)
-	http.HandleFunc("/view/", viewHandler)
-	http.HandleFunc("/pattern/", testHandler)
+	http.HandleFunc("/index/", indexHandler)
+	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("src/frontEnd/static"))))
     log.Fatal(http.ListenAndServe(":8080", nil))
     
     
