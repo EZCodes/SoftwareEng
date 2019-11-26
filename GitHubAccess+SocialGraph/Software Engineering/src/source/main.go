@@ -209,7 +209,7 @@ func fetchGoogleRepos(client *github.Client) ([]*LiteRepository, error) {
 // Gets all commits for provided repositories
 func getCommits( client *github.Client, repos []*LiteRepository, upload_chan, data_chan chan InformationToUpload) error {
 	opt := &github.CommitsListOptions{
-		//Since: (time.Date(2016, 1, 1, 1, 1, 1, 1, time.FixedZone("CET", 1))),
+//		Since: (time.Date(2016, 1, 1, 1, 1, 1, 1, time.FixedZone("CET", 1))),
 		ListOptions: github.ListOptions{PerPage: 1000},
 	}
 	log.Println("Starting commits fetch")
