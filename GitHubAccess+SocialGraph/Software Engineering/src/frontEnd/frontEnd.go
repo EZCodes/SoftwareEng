@@ -99,7 +99,8 @@ func main() {
 								Values: google_non_emp_langs,
 							},
 						},
-					},{
+					},
+					{
 						Name: "Microsoft Repositories",
 						NextLevel: []ForthLevel{
 							{
