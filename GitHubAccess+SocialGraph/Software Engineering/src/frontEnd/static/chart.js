@@ -4,7 +4,7 @@ export default function define(runtime, observer) {
   const fileAttachments = new Map([["flare-2.json",new URL("./files/test",import.meta.url)]]);
   main.builtin("FileAttachment", runtime.fileAttachments(name => fileAttachments.get(name)));
   main.variable(observer()).define(["md"], function(md){return(
-md`# Microsoft VS Google Open Source comparison
+md`# Microsoft VS Google Open Source comparison graph:
 
 Click on the nodes to zoom in or zoom out of them!`
 )});
@@ -15,7 +15,7 @@ Click on the nodes to zoom in or zoom out of them!`
   let view;
 
   const svg = d3.create("svg")
-      .attr("viewBox", `-${width / 2} -${height / 2} ${width} ${height}`)
+      .attr("viewBox", `-${width / 2} -${height/2} ${width*1.7} ${height*1.7}`)
       .style("display", "block")
       .style("margin", "0 -14px")
       .style("background", color(0))
@@ -90,7 +90,7 @@ data => d3.pack()
     .sort((a, b) => b.value - a.value))
 )});
   main.variable(observer("width")).define("width", function(){return(
-932
+400
 )});
   main.variable(observer("height")).define("height", ["width"], function(width){return(
 width

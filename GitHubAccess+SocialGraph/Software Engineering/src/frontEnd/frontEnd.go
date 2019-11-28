@@ -9,6 +9,8 @@ import (
     "go.mongodb.org/mongo-driver/bson"
     "io/ioutil"
     "encoding/json"
+    "time"
+    "strconv"
 )
 
 //Information received from MongoDB
@@ -41,6 +43,7 @@ type Languages struct {
 	Lines_of_changes int
 }
 
+
 func main() {
 	// get mongoDB username and password
 	m_username, err := ioutil.ReadFile("src/frontEnd/username.txt") // file with just mongoDB username in it
@@ -67,67 +70,8 @@ func main() {
 	log.Println("Connected to MongoDB!")
 	collection := mongo_client.Database("Software_Engineering").Collection("Cached_Data")
 	
-	filter := bson.D{{}}
-	var data ReceivedInformation
-
-	err = collection.FindOne(context.TODO(), filter).Decode(&data)
-	if err != nil {
-	    log.Fatal(err)
-	}
-	log.Println("Data fetched")
-	
-	google_emp_langs := transferLangsFromDataToOutput(data.Google_contributors.Employee_languages)
-	google_non_emp_langs := transferLangsFromDataToOutput(data.Google_contributors.Non_employee_languages)
-	ms_emp_langs := transferLangsFromDataToOutput(data.Microsoft_contributors.Employee_languages)
-	ms_non_emp_langs := transferLangsFromDataToOutput(data.Microsoft_contributors.Non_employee_languages)
-	
-	outputData := FirstLevel{
-		Name: "Open Source Comparison",
-		NextLevel : []SecondLevel{
-			{
-				Name: "Google and Microsoft Repositories",
-				NextLevel: []ThirdLevel{
-					{
-						Name: "Google Repositories",
-						NextLevel: []ForthLevel{
-							{
-								Name: "Employees",
-								Values: google_emp_langs,
-							},
-							{
-								Name: "Non-Employees",
-								Values: google_non_emp_langs,
-							},
-						},
-					},
-					{
-						Name: "Microsoft Repositories",
-						NextLevel: []ForthLevel{
-							{
-								Name: "Employees",
-								Values: ms_emp_langs,
-							},
-							{
-								Name: "Non-Employees",
-								Values: ms_non_emp_langs,
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-	
-	dataJSON, err := json.MarshalIndent(outputData, "", " ")
-	if err != nil {
-        log.Fatal(err)
-    }
-	
-	err = ioutil.WriteFile("src/frontEnd/static/files/test", dataJSON, 0644)
-	if err != nil {
-        log.Fatal(err)
-    }
-	log.Println("Test JSON written")
+	// fetch new JSON data every hour
+	go updateJSON(collection)
 	
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("src/frontEnd/static"))))
     log.Fatal(http.ListenAndServe(":8080", nil))
@@ -143,4 +87,71 @@ func transferLangsFromDataToOutput(langs []Languages) []Fields {
 		values = append(values, value)
 	}
 	return values
+}
+
+func updateJSON(collection *mongo.Collection) {
+	for {
+		filter := bson.D{{}}
+		var data ReceivedInformation
+
+		err := collection.FindOne(context.TODO(), filter).Decode(&data)
+		if err != nil {
+		    log.Fatal(err)
+		}
+		log.Println("Data fetched")
+
+		google_emp_langs := transferLangsFromDataToOutput(data.Google_contributors.Employee_languages)
+		google_non_emp_langs := transferLangsFromDataToOutput(data.Google_contributors.Non_employee_languages)
+		ms_emp_langs := transferLangsFromDataToOutput(data.Microsoft_contributors.Employee_languages)
+		ms_non_emp_langs := transferLangsFromDataToOutput(data.Microsoft_contributors.Non_employee_languages)
+	
+		outputData := FirstLevel{
+			Name: "Open Source Comparison",
+			NextLevel : []SecondLevel{
+				{
+					Name: "Google and Microsoft Repositories",
+					NextLevel: []ThirdLevel{
+						{
+							Name: "Google Repositories",
+							NextLevel: []ForthLevel{
+								{
+									Name: "Employees: "+strconv.Itoa(data.Google_contributors.Employee_count),
+									Values: google_emp_langs,
+								},
+								{
+									Name: "Non-Employees: "+strconv.Itoa(data.Google_contributors.Non_employee_count),
+									Values: google_non_emp_langs,
+								},
+							},
+						},
+						{
+							Name: "Microsoft Repositories",
+							NextLevel: []ForthLevel{
+								{
+									Name: "Employees: "+strconv.Itoa(data.Microsoft_contributors.Employee_count),
+									Values: ms_emp_langs,
+								},
+								{
+									Name: "Non-Employees: "+strconv.Itoa(data.Microsoft_contributors.Non_employee_count),
+									Values: ms_non_emp_langs,
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+	
+		dataJSON, err := json.MarshalIndent(outputData, "", " ")
+		if err != nil {
+	        log.Fatal(err)
+	    }
+	
+		err = ioutil.WriteFile("src/frontEnd/static/files/test", dataJSON, 0644)
+		if err != nil {
+	        log.Fatal(err)
+	    }
+		log.Println("Test JSON written")
+		time.Sleep(time.Hour)
+	}
 }
