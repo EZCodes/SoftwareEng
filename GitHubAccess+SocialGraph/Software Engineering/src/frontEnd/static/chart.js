@@ -15,7 +15,7 @@ Click on the nodes to zoom in or zoom out of them!`
   let view;
 
   const svg = d3.create("svg")
-      .attr("viewBox", `-${width / 2} -${height/2} ${width*1.7} ${height*1.7}`)
+      .attr("viewBox", `-${width/1.3} -${height/2} ${width*1.7} ${height}`)
       .style("display", "block")
       .style("margin", "0 -14px")
       .style("background", color(0))
