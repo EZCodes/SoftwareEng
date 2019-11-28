@@ -37,4 +37,8 @@ Once BackEnd starts, after a bit, initial information will be uploaded and can b
 As I mentioned, it's a lot of information, so it will fetch for a long time for full metrics, but FrontEnd will work with partial ones.
 Once FrontEnd is executed, access localhost:8080/static to see the results.
 
+Working Demo:
+
+
+[![](http://img.youtube.com/vi/UGtQCFQjqfQ/0.jpg)](http://www.youtube.com/watch?v=UGtQCFQjqfQ "Demo Video")
 
