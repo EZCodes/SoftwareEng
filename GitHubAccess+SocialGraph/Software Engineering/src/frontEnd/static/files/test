@@ -8,20 +8,60 @@
      "name": "Google Repositories",
      "children": [
       {
-       "name": "Employees",
+       "name": "Employees: 37",
        "children": [
         {
          "name": "Other",
-         "value": 94527
+         "value": 6225
+        },
+        {
+         "name": "Java",
+         "value": 111815
+        },
+        {
+         "name": "HTML",
+         "value": 480
+        },
+        {
+         "name": "JavaScript",
+         "value": 28
+        },
+        {
+         "name": "C",
+         "value": 693
         }
        ]
       },
       {
-       "name": "Non-Employees",
+       "name": "Non-Employees: 3027",
        "children": [
         {
          "name": "Other",
-         "value": 1326658
+         "value": 3195132
+        },
+        {
+         "name": "Java",
+         "value": 120114
+        },
+        {
+         "name": "HTML",
+         "value": 630440
+        },
+        {
+         "name": "C++",
+         "value": 153
+        },
+        {
+         "name": "JavaScript",
+         "value": 2893050
+        },
+        {
+         "name": "Python",
+         "value": 1881021
+        },
+        {
+         "name": "C",
+         "value": 2777413
         }
        ]
       }
@@ -31,20 +71,80 @@
      "name": "Microsoft Repositories",
      "children": [
       {
-       "name": "Employees",
+       "name": "Employees: 4",
        "children": [
         {
          "name": "Other",
-         "value": 4872483
+         "value": 269358
+        },
+        {
+         "name": "C",
+         "value": 100109
+        },
+        {
+         "name": "C++",
+         "value": 121422
+        },
+        {
+         "name": "Python",
+         "value": 4512
+        },
+        {
+         "name": "JavaScript",
+         "value": 806
+        },
+        {
+         "name": "HTML",
+         "value": 27
+        },
+        {
+         "name": "Java",
+         "value": 721
+        },
+        {
+         "name": "C#",
+         "value": 4884
         }
        ]
       },
       {
-       "name": "Non-Employees",
+       "name": "Non-Employees: 997",
        "children": [
         {
          "name": "Other",
-         "value": 4665789
+         "value": 5612692
+        },
+        {
+         "name": "C",
+         "value": 6294693
+        },
+        {
+         "name": "Java",
+         "value": 361555
+        },
+        {
+         "name": "C++",
+         "value": 9905178
+        },
+        {
+         "name": "HTML",
+         "value": 24795
+        },
+        {
+         "name": "LLVM",
+         "value": 5616
+        },
+        {
+         "name": "JavaScript",
+         "value": 612881
+        },
+        {
+         "name": "Python",
+         "value": 121470
+        },
+        {
+         "name": "C#",
+         "value": 15893
         }
        ]
       }
