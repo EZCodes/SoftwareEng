@@ -43,7 +43,6 @@ type Languages struct {
 	Lines_of_changes int
 }
 
-
 func main() {
 	// get mongoDB username and password
 	m_username, err := ioutil.ReadFile("src/frontEnd/username.txt") // file with just mongoDB username in it
