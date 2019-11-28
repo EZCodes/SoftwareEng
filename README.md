@@ -9,3 +9,6 @@ Lowest Common Ancestor Part 1 is identified by commit 9b0ddf4206a34322e3e7f81dbc
 DAG Branch implementation merged with master by commit 354202f16918090c414d8540742f9f47062dee52 on 11th of October
 
 Biography is written by me, based on Wikipedia and biography.com
+
+
+For Github Visualisation project, final commit is indicated by commit under id 27418337fca8d12fc9549b7e8cbc9ee1630e56cd on 28th of October
